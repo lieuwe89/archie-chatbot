@@ -58,6 +58,7 @@ async function searchAlleGroningers(q) {
         const url = \`https://api.openarch.nl/v1/search.json?name=\${encodeURIComponent(q)}&set=gra&number_of_results=5\`;
         const response = await fetch(url);
         const data = await response.json();
+        console.log("DEBUG RAW DATA:", JSON.stringify(data));
         return (data.results || []).map(r => ({
             source: 'AlleGroningers',
             title: r.event_type + ': ' + (r.person_name || q),
@@ -73,6 +74,7 @@ async function searchBeeldbank(q) {
         const url = \`https://webservices.memorix.nl/mediabank/v1/search?q=\${encodeURIComponent(q)}&rows=5\`;
         const response = await fetch(url, { headers: { 'x-api-key': BEELDBANK_API_KEY } });
         const data = await response.json();
+        console.log("DEBUG RAW DATA:", JSON.stringify(data));
         // The path depends on the exact JSON structure of Memorix
         return (data.results || []).map(item => ({
             source: 'Beeldbank Groningen',
@@ -91,6 +93,7 @@ async function searchInventories(q) {
         const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
         if (!response.ok) return [];
         const data = await response.json();
+        console.log("DEBUG RAW DATA:", JSON.stringify(data));
         return (data.results || []).map(item => ({
             source: 'Groninger Archieven',
             title: item.title,
