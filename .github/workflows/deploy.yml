@@ -1,4 +1,4 @@
-name: Deploy Archie to Playground
+name: Deploy to Fly.io
 
 on:
   push:
@@ -8,69 +8,12 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Build Frontend
-        run: npm run build
-
-      - name: Setup SSH
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
-          chmod 644 ~/.ssh/known_hosts
-
-      - name: Deploy via tar pipe
-        run: |
-          # Only include necessary files for production
-          tar czf - \
-            dist/ \
-            server/ \
-            package.json \
-            package-lock.json \
-            ecosystem.config.cjs \
-            | ssh -i ~/.ssh/deploy_key \
-                -o StrictHostKeyChecking=no \
-                ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
-                "set -e
-                 DEPLOY=${{ secrets.DEPLOY_PATH }}
-                 TMP=\${DEPLOY}.deploying
-                 rm -rf \$TMP
-                 mkdir -p \$TMP
-                 tar xzf - -C \$TMP
-                 
-                 # Prepare production environment
-                 cd \$TMP
-                 npm install --production
-                 
-                 # Swap deployments
-                 rm -rf \${DEPLOY}.old
-                 if [ -d \"\$DEPLOY\" ]; then
-                   # Copy existing .env if it exists in the current deployment
-                   cp \${DEPLOY}/.env \$TMP/.env || true
-                   mv \$DEPLOY \${DEPLOY}.old
-                 fi
-                 mv \$TMP \$DEPLOY
-                 
-                 # Restart with PM2
-                 cd \$DEPLOY
-                 pm2 startOrRestart ecosystem.config.cjs --env production
-                 
-                 rm -rf \${DEPLOY}.old"
-
-      - name: Cleanup SSH key
-        if: always()
-        run: rm -f ~/.ssh/deploy_key
+      - name: Setup Flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Deploy
+        run: flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
