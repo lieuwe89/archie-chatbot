@@ -37,6 +37,13 @@ export const api = {
     user: () => authenticatedFetch('/api/auth/user'),
     logout: () => authenticatedFetch('/api/auth/logout', { method: 'POST' }),
   },
+
+  // Archie Search (public or protected based on server config)
+  archie: {
+    search: (q) => authenticatedFetch('/api/archie/search', {
+      method: 'POST',
+      body: JSON.stringify({ q }),
+    }).then(res => res.json()),  },
   
   // Protected endpoints
   config: () => authenticatedFetch('/api/config'),

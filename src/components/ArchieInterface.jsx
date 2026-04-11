@@ -33,7 +33,7 @@ const ArchieInterface = () => {
 
         try {
             // 1. Fetch search results and summary from Archie API
-            const response = await api.post('/archie/search', { q: userQuery });
+            const response = await api.archie.search(userQuery);
             const { results, summary } = response;
             
             setMessages(prev => [...prev, { 
