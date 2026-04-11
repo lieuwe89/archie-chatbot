@@ -41,6 +41,13 @@ function AppContent() {
   const navigate = useNavigate();
   const { sessionId } = useParams();
   
+  // Playground Redirect: If hosted on playground subdomain, default to Archie
+  useEffect(() => {
+    if (window.location.hostname.includes('playground') && window.location.pathname === '/') {
+      navigate('/archie', { replace: true });
+    }
+  }, [navigate]);
+
   const { updateAvailable, latestVersion, currentVersion } = useVersionCheck('siteboon', 'claudecodeui');
   const [showVersionModal, setShowVersionModal] = useState(false);
   
