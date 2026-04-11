@@ -32,7 +32,7 @@ import cors from 'cors';
 import { promises as fsPromises } from 'fs';
 import { spawn, execSync } from 'child_process';
 import os from 'os';
-import pty from 'node-pty';
+// import pty from 'node-pty';
 import fetch from 'node-fetch';
 import mime from 'mime-types';
 
@@ -560,7 +560,7 @@ function handleShellConnection(ws) {
           
           
           // Start shell using PTY for proper terminal emulation
-          shellProcess = pty.spawn('bash', ['-c', shellCommand], {
+          console.log('Shell disabled'); // shellProcess = pty.spawn('bash', ['-c', shellCommand], {
             name: 'xterm-256color',
             cols: 80,
             rows: 24,
