@@ -30,7 +30,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 
 import { useWebSocket } from './utils/websocket';
 import { ThemeProvider } from './contexts/ThemeContext';
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import { useVersionCheck } from './hooks/useVersionCheck';
 import { api } from './utils/api';
@@ -104,7 +104,7 @@ function AppContent() {
 
   useEffect(() => {
     // Fetch projects on component mount
-    fetchProjects();
+    if (user) fetchProjects();
   }, []);
 
   // Helper function to determine if an update is purely additive (new sessions/projects)
@@ -517,7 +517,7 @@ function AppContent() {
   return (
     <div className="fixed inset-0 flex bg-background">
       {/* Fixed Desktop Sidebar */}
-      {!isMobile && (
+      {!isMobile && user && (
         <div className="w-80 flex-shrink-0 border-r border-border bg-card">
           <div className="h-full overflow-hidden">
             <Sidebar
@@ -542,7 +542,7 @@ function AppContent() {
       )}
 
       {/* Mobile Sidebar Overlay */}
-      {isMobile && (
+      {isMobile && user && (
         <div className={`fixed inset-0 z-50 flex transition-all duration-150 ease-out ${
           sidebarOpen ? 'opacity-100 visible' : 'opacity-0 invisible'
         }`}>
@@ -612,7 +612,7 @@ function AppContent() {
       </div>
 
       {/* Mobile Bottom Navigation */}
-      {isMobile && (
+      {isMobile && user && (
         <MobileNav
           activeTab={activeTab}
           setActiveTab={setActiveTab}
@@ -657,6 +657,7 @@ function AppContent() {
 
 // Archie Page Component
 function ArchiePage() {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -668,7 +669,7 @@ function ArchiePage() {
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
-    fetchProjects();
+    if (user) fetchProjects();
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
@@ -686,7 +687,7 @@ function ArchiePage() {
 
   return (
     <div className="fixed inset-0 flex bg-background">
-      {!isMobile && (
+      {!isMobile && user && (
         <div className="w-80 flex-shrink-0 border-r border-border bg-card">
           <Sidebar
             projects={projects}
@@ -703,7 +704,7 @@ function ArchiePage() {
       )}
       
       <div className="flex-1 flex flex-col min-w-0">
-        {isMobile && (
+        {isMobile && user && (
           <div className="p-4 border-b border-border bg-card flex items-center">
             <button onClick={() => setSidebarOpen(true)} className="p-2 -ml-2">
               <span className="sr-only">Open sidebar</span>
@@ -731,15 +732,15 @@ function App() {
     <ErrorBoundary>
       <ThemeProvider>
         <AuthProvider>
-          <ProtectedRoute>
+          
             <Router basename="/archie">
               <Routes>
                 <Route path="/" element={<ArchiePage />} />
-                <Route path="/session/:sessionId" element={<AppContent />} />
-                <Route path="/admin" element={<AppContent />} />
+                <Route path="/session/:sessionId" element={<ProtectedRoute><AppContent /></ProtectedRoute>} />
+                <Route path="/admin" element={<ProtectedRoute><AppContent /></ProtectedRoute>} />
               </Routes>
             </Router>
-          </ProtectedRoute>
+          
         </AuthProvider>
       </ThemeProvider>
     </ErrorBoundary>

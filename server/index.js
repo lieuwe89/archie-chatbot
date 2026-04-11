@@ -178,7 +178,7 @@ app.use('/api/git', authenticateToken, gitRoutes);
 app.use('/api/mcp', authenticateToken, mcpRoutes);
 
 // Archie Archive Search API Routes (protected)
-app.use('/api/archie', authenticateToken, archieRoutes);
+app.use('/api/archie', archieRoutes);
 
 // Static files served after API routes
 app.use('/archie', express.static(path.join(__dirname, '../dist')));
