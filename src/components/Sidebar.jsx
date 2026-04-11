@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ScrollArea } from './ui/scroll-area';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -52,6 +53,7 @@ function Sidebar({
   currentVersion,
   onShowVersionModal
 }) {
+  const navigate = useNavigate();
   const [expandedProjects, setExpandedProjects] = useState(new Set());
   const [editingProject, setEditingProject] = useState(null);
   const [showNewProject, setShowNewProject] = useState(false);
@@ -443,6 +445,15 @@ function Sidebar({
               <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''} group-hover:rotate-180 transition-transform duration-300`} />
             </Button>
             <Button
+              variant="ghost"
+              size="sm"
+              className="h-9 w-9 px-0 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors duration-200 group"
+              onClick={() => navigate('/archie')}
+              title="Talk to Archie (Archive Bot)"
+            >
+              <Sparkles className="w-4 h-4 text-amber-500 group-hover:scale-110 transition-transform" />
+            </Button>
+            <Button
               variant="default"
               size="sm"
               className="h-9 w-9 px-0 bg-primary hover:bg-primary/90 transition-all duration-200 shadow-sm hover:shadow-md"
@@ -480,6 +491,13 @@ function Sidebar({
                 disabled={isRefreshing}
               >
                 <RefreshCw className={`w-4 h-4 text-foreground ${isRefreshing ? 'animate-spin' : ''}`} />
+              </button>
+              <button
+                className="w-8 h-8 rounded-md bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 flex items-center justify-center active:scale-95 transition-all duration-150"
+                onClick={() => navigate('/archie')}
+                title="Archie"
+              >
+                <Sparkles className="w-4 h-4 text-amber-500" />
               </button>
               <button
                 className="w-8 h-8 rounded-md bg-primary text-primary-foreground flex items-center justify-center active:scale-95 transition-all duration-150"

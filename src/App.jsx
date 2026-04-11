@@ -25,6 +25,7 @@ import MainContent from './components/MainContent';
 import MobileNav from './components/MobileNav';
 import ToolsSettings from './components/ToolsSettings';
 import QuickSettingsPanel from './components/QuickSettingsPanel';
+import ArchieInterface from './components/ArchieInterface';
 import ErrorBoundary from './components/ErrorBoundary';
 
 import { useWebSocket } from './utils/websocket';
@@ -647,6 +648,76 @@ function AppContent() {
   );
 }
 
+// Archie Page Component
+function ArchiePage() {
+  const navigate = useNavigate();
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [projects, setProjects] = useState([]);
+  const [isLoadingProjects, setIsLoadingProjects] = useState(true);
+  const { updateAvailable, latestVersion, currentVersion } = useVersionCheck('siteboon', 'claudecodeui');
+  const [showToolsSettings, setShowToolsSettings] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    fetchProjects();
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const fetchProjects = async () => {
+    try {
+      const response = await api.projects();
+      const data = await response.json();
+      setProjects(data);
+    } catch (error) {
+      console.error('Error fetching projects:', error);
+    } finally {
+      setIsLoadingProjects(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 flex bg-background">
+      {!isMobile && (
+        <div className="w-80 flex-shrink-0 border-r border-border bg-card">
+          <Sidebar
+            projects={projects}
+            onProjectSelect={(p) => navigate(`/session`)} // Simplified for Archie
+            onSessionSelect={(s) => navigate(`/session/${s.id}`)}
+            isLoading={isLoadingProjects}
+            onRefresh={fetchProjects}
+            onShowSettings={() => setShowToolsSettings(true)}
+            updateAvailable={updateAvailable}
+            latestVersion={latestVersion}
+            currentVersion={currentVersion}
+          />
+        </div>
+      )}
+      
+      <div className="flex-1 flex flex-col min-w-0">
+        {isMobile && (
+          <div className="p-4 border-b border-border bg-card flex items-center">
+            <button onClick={() => setSidebarOpen(true)} className="p-2 -ml-2">
+              <span className="sr-only">Open sidebar</span>
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+            <h1 className="ml-2 font-bold italic">Archie</h1>
+          </div>
+        )}
+        <ArchieInterface />
+      </div>
+
+      <ToolsSettings
+        isOpen={showToolsSettings}
+        onClose={() => setShowToolsSettings(false)}
+      />
+    </div>
+  );
+}
+
 // Root App component with router
 function App() {
   return (
@@ -658,6 +729,7 @@ function App() {
               <Routes>
                 <Route path="/" element={<AppContent />} />
                 <Route path="/session/:sessionId" element={<AppContent />} />
+                <Route path="/archie" element={<ArchiePage />} />
               </Routes>
             </Router>
           </ProtectedRoute>
