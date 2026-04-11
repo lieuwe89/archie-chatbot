@@ -182,7 +182,10 @@ app.use('/api/archie', authenticateToken, archieRoutes);
 
 // Static files served after API routes
 app.use('/archie', express.static(path.join(__dirname, '../dist')));
-
+app.get('/archie*', (req, res, next) => {
+  if (req.url.startsWith('/api')) return next();
+  res.sendFile(path.join(__dirname, '../dist/index.html'));
+});
 // API Routes (protected)
 app.get('/api/config', authenticateToken, (req, res) => {
   const host = req.headers.host || `${req.hostname}:${PORT}`;
@@ -917,7 +920,6 @@ app.post('/api/projects/:projectName/upload-images', authenticateToken, async (r
 
 // Serve React app for all other routes
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
 
 // Helper function to convert permissions to rwx format
@@ -1023,4 +1025,3 @@ async function startServer() {
 }
 
 startServer();
-\n// Catch-all for SPA\napp.get('/archie*', (req, res) => {\n  res.sendFile(path.join(__dirname, '../dist/index.html'));\n});
