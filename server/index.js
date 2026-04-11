@@ -180,6 +180,8 @@ app.use('/api/mcp', authenticateToken, mcpRoutes);
 // Archie Archive Search API Routes (protected)
 app.use('/api/archie', archieRoutes);
 
+// Root redirect to /archie/
+app.get('/', (req, res) => res.redirect('/archie/'));
 // Static files served after API routes
 app.use('/archie', express.static(path.join(__dirname, '../dist'), { redirect: true }));
 app.get('/archie*', (req, res, next) => {
@@ -748,7 +750,7 @@ app.post('/api/projects/:projectName/upload-images', authenticateToken, async (r
 });
 
 // Serve React app for all other routes
-app.get('*', (req, res) => {
+app.get('*', (req, res) => { res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
 
 // Helper function to convert permissions to rwx format
