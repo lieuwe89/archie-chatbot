@@ -832,7 +832,7 @@ async function getFileTree(dirPath, maxDepth = 3, currentDepth = 0, showHidden =
   });
 }
 
-const PORT = process.env.PORT || 4008;
+const PORT = process.env.PORT || 4008; console.log("STARTING SERVER ON PORT:", PORT, "ENV PORT:", process.env.PORT);
 
 // Initialize database and start server
 async function startServer() {
