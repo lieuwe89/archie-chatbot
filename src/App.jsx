@@ -43,8 +43,8 @@ function AppContent() {
   
   // Playground Redirect: If hosted on playground subdomain, default to Archie
   useEffect(() => {
-    if (window.location.hostname.includes('playground') && window.location.pathname === '/') {
-      navigate('/archie', { replace: true });
+    if (window.location.hostname.includes('playground') && window.location.pathname === '/archie' || window.location.pathname === '/archie/') {
+      navigate('/', { replace: true });
     }
   }, [navigate]);
 
@@ -732,11 +732,11 @@ function App() {
       <ThemeProvider>
         <AuthProvider>
           <ProtectedRoute>
-            <Router>
+            <Router basename="/archie">
               <Routes>
-                <Route path="/" element={<AppContent />} />
+                <Route path="/" element={<ArchiePage />} />
                 <Route path="/session/:sessionId" element={<AppContent />} />
-                <Route path="/archie" element={<ArchiePage />} />
+                <Route path="/admin" element={<AppContent />} />
               </Routes>
             </Router>
           </ProtectedRoute>

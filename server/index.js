@@ -181,7 +181,7 @@ app.use('/api/mcp', authenticateToken, mcpRoutes);
 app.use('/api/archie', authenticateToken, archieRoutes);
 
 // Static files served after API routes
-app.use(express.static(path.join(__dirname, '../dist')));
+app.use('/archie', express.static(path.join(__dirname, '../dist')));
 
 // API Routes (protected)
 app.get('/api/config', authenticateToken, (req, res) => {
@@ -1023,3 +1023,4 @@ async function startServer() {
 }
 
 startServer();
+\n// Catch-all for SPA\napp.get('/archie*', (req, res) => {\n  res.sendFile(path.join(__dirname, '../dist/index.html'));\n});

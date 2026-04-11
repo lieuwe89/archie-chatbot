@@ -7,7 +7,7 @@ export default defineConfig(({ command, mode }) => {
   
   
   return {
-    plugins: [react()],
+    base: '/archie/', plugins: [react()],
     server: {
       port: parseInt(env.VITE_PORT) || 4009,
       proxy: {
