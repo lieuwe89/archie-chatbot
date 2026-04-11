@@ -12,6 +12,5 @@ RUN npm run build
 FROM base
 RUN apt-get update -qq && apt-get install --no-install-recommends -y python3 make g++
 COPY --from=build /app /app
-RUN npm rebuild node-pty --build-from-source
 EXPOSE 4008
 CMD [ "node", "server/index.js" ]

@@ -181,7 +181,7 @@ app.use('/api/mcp', authenticateToken, mcpRoutes);
 app.use('/api/archie', archieRoutes);
 
 // Static files served after API routes
-app.use('/archie', express.static(path.join(__dirname, '../dist')));
+app.use('/archie', express.static(path.join(__dirname, '../dist'), { redirect: true }));
 app.get('/archie*', (req, res, next) => {
   if (req.url.startsWith('/api')) return next();
   res.sendFile(path.join(__dirname, '../dist/index.html'));
