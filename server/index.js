@@ -842,7 +842,7 @@ async function startServer() {
     // console.log('✅ Database initialization skipped (testing)');
     
     server.listen(PORT, '0.0.0.0', async () => {
-      // console.log(`Gemini CLI UI server running on http://0.0.0.0:${PORT}`);
+      console.log(`Gemini CLI UI server running on http://0.0.0.0:${PORT}`);
       
       // Start watching the projects folder for changes
       await setupProjectsWatcher(); // Re-enabled with better-sqlite3
