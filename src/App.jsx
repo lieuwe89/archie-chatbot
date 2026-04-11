@@ -43,7 +43,7 @@ function AppContent() {
   
   // Playground Redirect: If hosted on playground subdomain, default to Archie
   useEffect(() => {
-    if (window.location.hostname.includes('playground') && window.location.pathname === '/archie' || window.location.pathname === '/archie/') {
+    if (!window.location.hostname.includes('fly.dev') && window.location.pathname === '/archie' || window.location.pathname === '/archie/') {
       navigate('/', { replace: true });
     }
   }, [navigate]);

@@ -93,6 +93,9 @@ async function searchAlleGroningers(q) {
         const url = `https://api.openarch.nl/v1/search.json?name=${encodeURIComponent(q)}&set=gra&number_of_results=5`;
         const response = await fetch(url);
         const data = await response.json();
+        console.log("Inventory Raw:", JSON.stringify(data).slice(0, 500));
+        console.log("Beeldbank Raw:", JSON.stringify(data).slice(0, 500));
+        console.log("AlleGroningers Raw:", JSON.stringify(data).slice(0, 500));
         
         return (data.results || []).map(record => ({
             source: 'AlleGroningers',
@@ -124,6 +127,9 @@ async function searchBeeldbank(q) {
             }
         });
         const data = await response.json();
+        console.log("Inventory Raw:", JSON.stringify(data).slice(0, 500));
+        console.log("Beeldbank Raw:", JSON.stringify(data).slice(0, 500));
+        console.log("AlleGroningers Raw:", JSON.stringify(data).slice(0, 500));
 
         return (data.results || []).map(item => ({
             source: 'Beeldbank Groningen',
@@ -149,6 +155,9 @@ async function searchInventories(q) {
             headers: { 'Accept': 'application/json' }
         });
         const data = await response.json();
+        console.log("Inventory Raw:", JSON.stringify(data).slice(0, 500));
+        console.log("Beeldbank Raw:", JSON.stringify(data).slice(0, 500));
+        console.log("AlleGroningers Raw:", JSON.stringify(data).slice(0, 500));
 
         return (data.results || []).map(item => ({
             source: 'Groninger Archieven',
