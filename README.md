@@ -1,3 +1,10 @@
+# Archie - Groningen Archive Chatbot
+
+Archie is an intelligent assistant for the Groninger Archieven. It helps users search across multiple archival silos (AlleGroningers, Beeldbank, and Inventories) using natural language, synthesized by Gemini AI.
+
+This project is based on the Gemini CLI UI and lives at `playground.lieuwejongsma.nl/archie`.
+
+--- 
 <div align="center">
   <img src="public/logo.svg" alt="Gemini CLI UI" width="64" height="64">
   <h1>Gemini CLI UI</h1>
