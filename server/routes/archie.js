@@ -1,98 +1,85 @@
-import express from 'express';
-import fetch from 'node-fetch';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+// server/routes/archie.js
+import express from 'express'
+import { GoogleGenerativeAI } from '@google/generative-ai'
+import { getOrCreate, update } from '../archieSession.js'
+import { toolDeclarations, executeTool } from '../archieTools.js'
+import { retrieve } from '../archieRag.js'
 
-const router = express.Router();
-const BEELDBANK_API_KEY = 'ec94b228-142b-11e5-9b13-53eabf91064e';
+const router = express.Router()
 
-let genAI = null;
+let genAI = null
 if (process.env.GEMINI_API_KEY) {
-    genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+  genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
 }
 
-router.post('/search', async (req, res) => {
-    const { q } = req.body;
-    if (!q) return res.status(400).json({ error: 'Search query "q" is required.' });
+const SYSTEM_INSTRUCTION_BASE = `You are Archie, the digital archivist for the Groninger Archieven.
+You help users — both casual visitors and serious researchers — find genealogical records and archival materials.
+Use the provided search tools. Search multiple times with different parameters if needed to answer the question thoroughly.
+Think step by step. When results are sparse, try alternative spellings or broader queries.
+Always share direct URLs to records when available.
+Respond in the same language the user uses.`
 
-    try {
-        const [genealogy, beeldbank, inventories] = await Promise.all([
-            searchAlleGroningers(q),
-            searchBeeldbank(q),
-            searchInventories(q)
-        ]);
+router.post('/chat', async (req, res) => {
+  const { message, sessionId } = req.body
+  if (!message || !sessionId) {
+    return res.status(400).json({ error: 'message and sessionId are required' })
+  }
+  if (!genAI) {
+    return res.status(503).json({ error: 'GEMINI_API_KEY not configured' })
+  }
 
-        const results = { genealogy, beeldbank, inventories };
-        let summary = null;
-        if (genAI) {
-            summary = await synthesizeResponse(q, results);
-        } else {
-            summary = "I found some records. See below.";
+  try {
+    const session = getOrCreate(sessionId)
+
+    // RAG: retrieve relevant knowledge chunks
+    const ragChunks = await retrieve(message, 5)
+    const ragSection = ragChunks.length > 0
+      ? `\n\n## Archive Knowledge\n${ragChunks.join('\n\n---\n\n')}`
+      : ''
+    const systemInstruction = SYSTEM_INSTRUCTION_BASE + ragSection
+
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-2.5-flash',
+      tools: [{ functionDeclarations: toolDeclarations }],
+      systemInstruction
+    })
+
+    const chat = model.startChat({ history: session.contents })
+
+    // First turn: user message
+    let response = await chat.sendMessage(message)
+    const toolCalls = []
+
+    // Agentic loop: keep executing tools until model stops calling them
+    while (true) {
+      const fns = response.response.functionCalls()
+      if (!fns || fns.length === 0) break
+
+      const functionResponses = await Promise.all(fns.map(async fn => {
+        const result = await executeTool(fn.name, fn.args)
+        toolCalls.push({ name: fn.name, args: fn.args, result })
+        return {
+          functionResponse: {
+            name: fn.name,
+            response: { content: JSON.stringify(result) }
+          }
         }
+      }))
 
-        res.json({ query: q, summary, results });
-    } catch (error) {
-        console.error('Archie Search Error:', error);
-        res.status(500).json({ error: 'Internal Server Error' });
+      response = await chat.sendMessage(functionResponses)
     }
-});
 
-async function synthesizeResponse(query, results) {
-    try {
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-        const prompt = "You are Archie, the digital archivist for the Groninger Archieven. The user asked: " + query + ". Results: " + JSON.stringify(results) + ". Task: Summarize these results helpfully and concisely.";
-        const result = await model.generateContent(prompt);
-        return result.response.text();
-    } catch (e) {
-        return "I found some interesting records for you.";
-    }
-}
+    const reply = response.response.text()
 
-async function searchAlleGroningers(q) {
-    try {
-        const url = 'https://api.openarch.nl/v1/search.json?name=' + encodeURIComponent(q) + '&set=gra&number_of_results=5';
-        const response = await fetch(url);
-        const data = await response.json();
-        console.log("AlleGroningers Raw:", JSON.stringify(data).slice(0, 200));
-        return (data.results || []).map(r => ({
-            source: 'AlleGroningers',
-            title: (r.event_type || 'Record') + ': ' + (r.person_name || q),
-            date: r.event_date,
-            handle: r.identifier,
-            description: r.description
-        }));
-    } catch (e) { return []; }
-}
+    // Persist updated history
+    const updatedHistory = await chat.getHistory()
+    update(sessionId, updatedHistory)
 
-async function searchBeeldbank(q) {
-    try {
-        const url = 'https://webservices.memorix.nl/mediabank/v1/search?q=' + encodeURIComponent(q) + '&rows=5';
-        const response = await fetch(url, { headers: { 'x-api-key': BEELDBANK_API_KEY } });
-        const data = await response.json();
-        console.log("Beeldbank Raw:", JSON.stringify(data).slice(0, 200));
-        return (data.results || []).map(item => ({
-            source: 'Beeldbank Groningen',
-            title: item.title || 'Afbeelding',
-            date: item.date,
-            handle: 'https://www.beeldbankgroningen.nl/beelden/detail/' + item.identifier,
-            thumbnail: item.thumbnail_url
-        }));
-    } catch (e) { return []; }
-}
+    res.json({ reply, toolCalls, sessionId })
+  } catch (error) {
+    console.error('Archie Chat Error:', error)
+    res.status(500).json({ error: 'Internal Server Error' })
+  }
+})
 
-async function searchInventories(q) {
-    try {
-        const url = 'https://www.archivesportaleurope.net/api/v1/search/fa?q=' + encodeURIComponent(q) + '&repositoryCode=NL-GrA&count=5';
-        const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
-        if (!response.ok) return [];
-        const data = await response.json();
-        console.log("Inventory Raw:", JSON.stringify(data).slice(0, 200));
-        return (data.results || []).map(item => ({
-            source: 'Groninger Archieven',
-            title: item.title,
-            handle: item.url,
-            description: item.scopecontent
-        }));
-    } catch (e) { return []; }
-}
-
-export default router;
+export default router
