@@ -148,7 +148,12 @@ router.get('/documents', requireAdmin, async (req, res) => {
 })
 
 // POST /documents — upload, chunk, embed, store
-router.post('/documents', requireAdmin, upload.single('file'), async (req, res) => {
+router.post('/documents', requireAdmin, (req, res, next) => {
+  upload.single('file')(req, res, (err) => {
+    if (err) return res.status(400).send(escapeHtml(err.message))
+    next()
+  })
+}, async (req, res) => {
   if (!req.file) return res.status(400).send('No file uploaded.')
 
   const filename = req.file.originalname
