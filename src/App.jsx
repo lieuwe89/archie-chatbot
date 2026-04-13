@@ -737,7 +737,6 @@ function App() {
               <Routes>
                 <Route path="/" element={<ArchiePage />} />
                 <Route path="/session/:sessionId" element={<ProtectedRoute><AppContent /></ProtectedRoute>} />
-                <Route path="/admin" element={<ProtectedRoute><AppContent /></ProtectedRoute>} />
               </Routes>
             </Router>
           

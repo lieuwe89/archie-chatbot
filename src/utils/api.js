@@ -38,9 +38,9 @@ export const api = {
     logout: () => authenticatedFetch('/api/auth/logout', { method: 'POST' }),
   },
 
-  // Archie chat
+  // Archie chat — uses /archie/api/ prefix so it's reachable when nginx only proxies /archie/
   archie: {
-    chat: (message, sessionId) => authenticatedFetch('/api/archie/chat', {
+    chat: (message, sessionId) => authenticatedFetch('/archie/api/archie/chat', {
       method: 'POST',
       body: JSON.stringify({ message, sessionId }),
     }).then(res => res.json()),

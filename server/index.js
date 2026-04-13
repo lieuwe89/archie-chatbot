@@ -185,8 +185,10 @@ app.use('/api/git', authenticateToken, gitRoutes);
 // MCP API Routes (protected)
 app.use('/api/mcp', authenticateToken, mcpRoutes);
 
-// Archie Archive Search API Routes (protected)
+// Archie Archive Search API Routes
 app.use('/api/archie', archieRoutes);
+// Also mount under /archie/api/ for deployments where nginx only proxies /archie/
+app.use('/archie/api/archie', archieRoutes);
 
 // Root redirect to /archie/
 app.get('/', (req, res) => res.redirect('/archie/'));
