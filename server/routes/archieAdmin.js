@@ -6,9 +6,10 @@ import crypto from 'crypto'
 import { addChunks, deleteBySource, listDocuments, chunkText } from '../archieRag.js'
 
 async function extractPdfText(buffer) {
-  const parser = new PDFParse({})
-  await parser.load(buffer)
-  return parser.getText()
+  const parser = new PDFParse({ data: buffer })
+  const result = await parser.getText()
+  await parser.destroy()
+  return result.text
 }
 
 const router = express.Router()

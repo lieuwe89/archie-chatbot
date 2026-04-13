@@ -1,5 +1,7 @@
 // src/components/ArchieInterface.jsx
 import React, { useState, useEffect, useRef } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { api } from '../utils/api'
 import { History, ExternalLink, Loader2, Send, ChevronDown, ChevronUp, Search } from 'lucide-react'
 
@@ -15,7 +17,7 @@ function getOrCreateSessionId() {
 const ArchieInterface = () => {
   const [messages, setMessages] = useState([{
     type: 'assistant',
-    content: "Hello! I'm Archie, your archive assistant. I can help you find people in AlleGroningers, photos in the Beeldbank, or historical collections in the Groningen Archives. What are you looking for today?",
+    content: "Hello! I'm Archie, your archive assistant. I can help you find people in AlleGroningers, images in the Beeldbank (photos, maps, drawings, and prints), or historical collections in the Groningen Archives. What are you looking for today?",
     timestamp: new Date(),
     toolCalls: []
   }])
@@ -90,7 +92,27 @@ const ArchieInterface = () => {
                 : 'bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-800 rounded-bl-none'
             }`}>
               {msg.toolCalls?.length > 0 && <ToolCallList toolCalls={msg.toolCalls} />}
-              <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+              {msg.type === 'assistant' ? (
+                <div className="text-sm leading-relaxed prose prose-sm dark:prose-invert max-w-none
+                  prose-p:my-0.5 prose-p:leading-relaxed
+                  prose-a:text-blue-600 dark:prose-a:text-blue-400 prose-a:no-underline hover:prose-a:underline
+                  prose-headings:text-gray-900 dark:prose-headings:text-gray-100
+                  prose-strong:text-gray-900 dark:prose-strong:text-gray-100
+                  prose-li:my-0">
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      a: ({ node, ...props }) => (
+                        <a {...props} target="_blank" rel="noopener noreferrer" />
+                      )
+                    }}
+                  >
+                    {msg.content}
+                  </ReactMarkdown>
+                </div>
+              ) : (
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+              )}
               <p className="text-[10px] mt-2 opacity-50 text-right">
                 {msg.timestamp.toLocaleTimeString()}
               </p>
@@ -166,16 +188,30 @@ const ToolCallList = ({ toolCalls }) => {
                 {JSON.stringify(tc.args)}
               </p>
               {Array.isArray(tc.result?.records) && tc.result.records.length > 0 && (
-                <div className="mt-1.5 space-y-1">
+                <div className="mt-1.5 space-y-1.5">
                   {tc.result.records.map((item, j) => (
-                    <div key={j} className="flex items-center justify-between text-[11px]">
-                      <span className="text-gray-600 dark:text-gray-400 truncate pr-2">{item.title}</span>
-                      {item.url && (
-                        <a href={item.url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-600 shrink-0">
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
-                      )}
-                    </div>
+                    item.thumbnail ? (
+                      <a key={j} href={item.url} target="_blank" rel="noopener noreferrer"
+                        className="flex items-start gap-2 p-1 rounded hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors">
+                        <img src={item.thumbnail} alt={item.title}
+                          className="w-14 h-14 object-cover rounded shrink-0 bg-gray-100 dark:bg-gray-700" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[11px] font-medium text-gray-700 dark:text-gray-300 line-clamp-2">{item.title}</p>
+                          {item.date && <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">{item.date}</p>}
+                          {item.creator && <p className="text-[10px] text-gray-400 dark:text-gray-500">{item.creator}</p>}
+                        </div>
+                        <ExternalLink className="w-3 h-3 text-blue-400 shrink-0 mt-0.5" />
+                      </a>
+                    ) : (
+                      <div key={j} className="flex items-center justify-between text-[11px]">
+                        <span className="text-gray-600 dark:text-gray-400 truncate pr-2">{item.title}</span>
+                        {item.url && (
+                          <a href={item.url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-600 shrink-0">
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
+                      </div>
+                    )
                   ))}
                 </div>
               )}

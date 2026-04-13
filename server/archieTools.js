@@ -96,16 +96,23 @@ async function searchAlleGroningers({ q, deed_type, gemeente, rows = 5, start = 
     const response = await fetch(url)
     const data = await response.json()
     const total = data.metadata?.pagination?.total
-    const records = (data.person || []).map(p => ({
-      source: 'AlleGroningers',
-      title: p.metadata?.person_display_name || q,
-      date: p.metadata?.datum,
-      deed_type: p.metadata?.deed_type_title,
-      municipality: p.metadata?.register_gemeente,
-      register: p.metadata?.register_naam,
-      occupation: p.metadata?.beroep,
-      url: `https://www.allegroningers.nl/zoeken-op-naam/persons/${p.entity_uuid}`
-    }))
+    const records = (data.person || []).map(p => {
+      const handleRaw = p.handle || p.pid || p.persistent_id || p.metadata?.handle || p.metadata?.pid
+      const handle = handleRaw
+        ? (handleRaw.startsWith('http') ? handleRaw : `https://hdl.handle.net/${handleRaw}`)
+        : null
+      return {
+        source: 'AlleGroningers',
+        title: p.metadata?.person_display_name || q,
+        date: p.metadata?.datum,
+        deed_type: p.metadata?.deed_type_title,
+        municipality: p.metadata?.register_gemeente,
+        register: p.metadata?.register_naam,
+        occupation: p.metadata?.beroep,
+        url: handle || `https://www.allegroningers.nl/zoeken-op-naam/persons/${p.entity_uuid}`,
+        handle: handle || null
+      }
+    })
     return { records, total }
   } catch (e) {
     return { error: e.message }
@@ -134,6 +141,11 @@ async function searchBeeldbank({ q, rows = 5, start = 0, from_date, to_date }) {
       const creator = Array.isArray(item.metadata)
         ? item.metadata.find(m => m.field === 'creator')?.value
         : null
+      const handleRaw = item.handle || item.pid || item.persistent_id
+        || (Array.isArray(item.metadata) ? item.metadata.find(m => m.field === 'handle' || m.field === 'pid')?.value : null)
+      const handle = handleRaw
+        ? (handleRaw.startsWith('http') ? handleRaw : `https://hdl.handle.net/${handleRaw}`)
+        : null
       return {
         source: 'Beeldbank Groningen',
         title: item.title || 'Afbeelding',
@@ -141,7 +153,8 @@ async function searchBeeldbank({ q, rows = 5, start = 0, from_date, to_date }) {
         creator,
         description: item.description,
         thumbnail: item.asset?.[0]?.thumb?.small,
-        url: `https://www.beeldbankgroningen.nl/beelden/detail/${item.id}`
+        url: handle || `https://www.beeldbankgroningen.nl/beelden/detail/${item.id}`,
+        handle: handle || null
       }
     })
     return { records, total }
