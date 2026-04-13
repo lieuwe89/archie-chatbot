@@ -35,6 +35,8 @@ import os from 'os';
 // import pty from 'node-pty';
 import fetch from 'node-fetch';
 import mime from 'mime-types';
+import session from 'express-session'
+import archieAdminRoutes from './routes/archieAdmin.js'
 
 import { getProjects, getSessions, getSessionMessages, renameProject, deleteSession, deleteProject, addProjectManually, extractProjectDirectory, clearProjectDirectoryCache } from './projects.js';
 import { spawnGemini, abortGeminiSession } from './gemini-cli.js';
@@ -164,6 +166,12 @@ const wss = new WebSocketServer({
 
 app.use(cors());
 app.use(express.json());
+app.use(session({
+  secret: process.env.ARCHIE_SESSION_SECRET || 'archie-dev-secret',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { httpOnly: true, maxAge: 24 * 60 * 60 * 1000 }
+}))
 
 // Optional API key validation (if configured)
 app.use('/api', validateApiKey);
@@ -182,6 +190,8 @@ app.use('/api/archie', archieRoutes);
 
 // Root redirect to /archie/
 app.get('/', (req, res) => res.redirect('/archie/'));
+// Archie admin panel (server-rendered, must be before static file serving)
+app.use('/archie/admin', archieAdminRoutes);
 // Static files served after API routes
 app.use('/archie', express.static(path.join(__dirname, '../dist'), { redirect: true }));
 app.get('/archie*', (req, res, next) => {
