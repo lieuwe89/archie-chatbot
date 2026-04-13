@@ -45,7 +45,7 @@ import gitRoutes from './routes/git.js';
 import authRoutes from './routes/auth.js';
 import mcpRoutes from './routes/mcp.js';
 import archieRoutes from './routes/archie.js';
-import { initializeDatabase } from './database/db.js';
+import { initializeDatabase, userDb, db } from './database/db.js';
 import { validateApiKey, authenticateToken, authenticateWebSocket } from './middleware/auth.js';
 
 // File system watcher for projects folder
@@ -851,11 +851,24 @@ async function startServer() {
   try {
     // Initialize authentication database
     await initializeDatabase();
-    // console.log('✅ Database initialization skipped (testing)');
-    
+
+    // Ensure admin user exists from env vars (create or update password)
+    if (process.env.ADMIN_USERNAME && process.env.ADMIN_PASSWORD) {
+      const bcrypt = (await import('bcrypt')).default;
+      const hash = await bcrypt.hash(process.env.ADMIN_PASSWORD, 12);
+      const existing = userDb.getUserByUsername(process.env.ADMIN_USERNAME);
+      if (!existing) {
+        userDb.createUser(process.env.ADMIN_USERNAME, hash);
+        console.log(`Admin user "${process.env.ADMIN_USERNAME}" created.`);
+      } else {
+        db.prepare('UPDATE geminicliui_users SET password_hash = ? WHERE username = ?').run(hash, process.env.ADMIN_USERNAME);
+        console.log(`Admin user "${process.env.ADMIN_USERNAME}" password updated.`);
+      }
+    }
+
     server.listen(PORT, '0.0.0.0', async () => {
       console.log(`Gemini CLI UI server running on http://0.0.0.0:${PORT}`);
-      
+
       // Start watching the projects folder for changes
       await setupProjectsWatcher(); // Re-enabled with better-sqlite3
     });
