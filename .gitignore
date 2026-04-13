@@ -131,4 +131,4 @@ TestApp.jsx
 # Project data and sessions (exclude from git)
 projects_data/
 session_data/
-user_uploads/
+user_uploads/.worktrees/
