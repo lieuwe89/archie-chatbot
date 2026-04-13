@@ -38,12 +38,13 @@ export const api = {
     logout: () => authenticatedFetch('/api/auth/logout', { method: 'POST' }),
   },
 
-  // Archie Search (public or protected based on server config)
+  // Archie chat
   archie: {
-    search: (q) => authenticatedFetch('/api/archie/search', {
+    chat: (message, sessionId) => authenticatedFetch('/api/archie/chat', {
       method: 'POST',
-      body: JSON.stringify({ q }),
-    }).then(res => res.json()),  },
+      body: JSON.stringify({ message, sessionId }),
+    }).then(res => res.json()),
+  },
   
   // Protected endpoints
   config: () => authenticatedFetch('/api/config'),
