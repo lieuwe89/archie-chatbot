@@ -147,6 +147,34 @@ export const toolDeclarations = [
     }
   },
   {
+    name: 'searchWikipedia',
+    description: 'Search Wikipedia for biographical information and historical context about famous persons, events, or locations.',
+    parameters: {
+      type: 'object',
+      properties: {
+        q: {
+          type: 'string',
+          description: 'Search query (e.g. name of a person).'
+        }
+      },
+      required: ['q']
+    }
+  },
+  {
+    name: 'searchVerhaalVanGroningen',
+    description: 'Search verhaalvangroningen.nl for historical stories, biographies, and background information about the history of Groningen.',
+    parameters: {
+      type: 'object',
+      properties: {
+        q: {
+          type: 'string',
+          description: 'Search query.'
+        }
+      },
+      required: ['q']
+    }
+  },
+  {
     name: 'searchPoparchiefGroningen',
     description: 'Search poparchiefgroningen.nl for information about pop music, pop culture, concerts, bands, venues, and current cultural events in Groningen. Use this tool whenever the question is about pop music, pop culture, or contemporary cultural life in Groningen.',
     parameters: {
@@ -285,6 +313,14 @@ async function searchArchievenNL({ q }) {
   return searchSite(q, 'archieven.nl')
 }
 
+async function searchWikipedia({ q }) {
+  return searchSite(q, 'nl.wikipedia.org')
+}
+
+async function searchVerhaalVanGroningen({ q }) {
+  return searchSite(q, 'verhaalvangroningen.nl')
+}
+
 async function searchPoparchiefGroningen({ q }) {
   return searchSite(q, 'poparchiefgroningen.nl')
 }
@@ -407,6 +443,8 @@ export async function executeTool(name, args) {
     case 'searchDelpher': return searchDelpher(args)
     case 'searchOpenArch': return searchOpenArch(args)
     case 'searchArchievenNL': return searchArchievenNL(args)
+    case 'searchWikipedia': return searchWikipedia(args)
+    case 'searchVerhaalVanGroningen': return searchVerhaalVanGroningen(args)
     case 'googleSearch': return googleSearch(args)
     default: return { error: `Unknown tool: ${name}` }
   }
