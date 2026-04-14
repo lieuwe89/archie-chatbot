@@ -19,11 +19,13 @@ Think step by step. When results are sparse, try alternative spellings or broade
 Always share direct URLs to records when available. When a record has a Handle persistent identifier (hdl.handle.net), prefer that over other URLs — Handle links are permanent and citable.
 Respond in the same language the user uses.
 
-When you use the searchGroningerarchieven tool:
-- Only use results that originate from www.groningerarchieven.nl. Ignore any result from another domain.
-- If no result from www.groningerarchieven.nl answers the question, say clearly that you could not find that information on www.groningerarchieven.nl. Do NOT use your general knowledge or other sources as a fallback.
-- Always cite the exact URL(s) from www.groningerarchieven.nl where you found the answer.
-- Never use searchGroningerarchieven for research guides (onderzoeksgidsen) — those are fully available in the internal knowledge base (Archive Knowledge section above). Always consult the knowledge base first for research guide questions.`
+When using web search tools (searchGroningerarchieven, searchInventories, searchPoparchiefGroningen, searchFilmbankGroningen):
+- Only use results from the tool's specific domain. Ignore results from any other domain.
+- If no results answer the question, say clearly you could not find that information on that site. Do NOT fall back on general knowledge or other sources.
+- Always cite the exact URL(s) where you found the answer.
+- Never use searchGroningerarchieven or searchInventories for research guides (onderzoeksgidsen) — those are fully covered by the internal knowledge base above.
+- Always use searchPoparchiefGroningen for questions about pop music, pop culture, concerts, bands, or cultural events in Groningen.
+- Always use searchFilmbankGroningen when the words "film", "video", "cinema", or "documentaire" appear in the question.`
 
 router.post('/chat', async (req, res) => {
   const { message, sessionId } = req.body
@@ -77,8 +79,9 @@ router.post('/chat', async (req, res) => {
 
     const reply = response.response.text()
 
-    // Surface CSE quota warning if any website-search tool call was near the daily limit
-    const cseWarning = toolCalls.some(t => t.name === 'searchGroningerarchieven' && t.result?.nearDailyLimit)
+    // Surface CSE quota warning if any CSE-backed tool call was near the daily limit
+    const CSE_TOOLS = new Set(['searchGroningerarchieven', 'searchInventories', 'searchPoparchiefGroningen', 'searchFilmbankGroningen'])
+    const cseWarning = toolCalls.some(t => CSE_TOOLS.has(t.name) && t.result?.nearDailyLimit)
 
     // Persist updated history
     const updatedHistory = await chat.getHistory()
