@@ -208,6 +208,11 @@ async function searchSite(q, siteHost) {
       q,
       num: 5
     })
+    
+    // Log masked config for debugging
+    const maskedKey = CSE_API_KEY ? `${CSE_API_KEY.slice(0, 6)}...${CSE_API_KEY.slice(-4)}` : 'MISSING'
+    console.log(`[CSE DEBUG] Using CX: ${CSE_CX}, Key: ${maskedKey}`)
+
     if (siteHost) {
       params.set('siteSearch', siteHost)
       params.set('siteSearchFilter', 'i')  // 'i' = include only this site
