@@ -23,6 +23,9 @@ const upload = multer({
   }
 })
 
+// Track files currently being indexed (in-memory; resets on restart)
+const indexingFiles = new Set()
+
 function requireAdmin(req, res, next) {
   if (req.session?.archieAdmin) return next()
   res.redirect('/archie/admin')
@@ -64,8 +67,16 @@ function loginPage(error = '') {
 </html>`
 }
 
-function dashboardPage(docs) {
-  const rows = docs.length === 0
+function dashboardPage(docs, pendingFiles = []) {
+  const pendingRows = pendingFiles.map(f => `
+    <tr>
+      <td style="padding:0.5rem 0;border-bottom:1px solid #f0f0f0;color:#d97706">
+        ${escapeHtml(f)} <span style="font-size:0.8rem">(indexing…)</span>
+      </td>
+      <td style="padding:0.5rem 0;border-bottom:1px solid #f0f0f0"></td>
+    </tr>`).join('')
+
+  const docRows = docs.length === 0 && pendingFiles.length === 0
     ? '<tr><td colspan="2" style="color:#999;text-align:center;padding:1rem">No documents uploaded yet.</td></tr>'
     : docs.map(doc => `
       <tr>
@@ -77,10 +88,15 @@ function dashboardPage(docs) {
         </td>
       </tr>`).join('')
 
+  const autoRefresh = pendingFiles.length > 0
+    ? '<meta http-equiv="refresh" content="5">'
+    : ''
+
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  ${autoRefresh}
   <title>Archie Admin — Knowledge Base</title>
   <style>
     body { font-family: system-ui, sans-serif; background: #f5f5f5; margin: 0; padding: 2rem; }
@@ -93,8 +109,6 @@ function dashboardPage(docs) {
     button.primary:disabled { background: #f59e0b; cursor: not-allowed; }
     table { width: 100%; border-collapse: collapse; }
     th { text-align: left; border-bottom: 2px solid #eee; padding: 0.5rem 0; font-size: 0.875rem; color: #666; }
-    #upload-status { display: none; margin-bottom: 1rem; font-size: 0.875rem; color: #d97706; }
-    #upload-status.visible { display: block; }
   </style>
 </head>
 <body>
@@ -110,17 +124,15 @@ function dashboardPage(docs) {
       <input type="file" name="file" accept=".txt,.md,.pdf" required>
       <button type="submit" class="primary" id="upload-btn">Upload</button>
     </form>
-    <div id="upload-status">Uploading and indexing… Large PDFs may take a minute or two. Please wait.</div>
     <table>
       <thead><tr><th>Document</th><th></th></tr></thead>
-      <tbody>${rows}</tbody>
+      <tbody>${pendingRows}${docRows}</tbody>
     </table>
   </div>
   <script>
     document.getElementById('upload-form').addEventListener('submit', function() {
       document.getElementById('upload-btn').disabled = true
       document.getElementById('upload-btn').textContent = 'Uploading…'
-      document.getElementById('upload-status').classList.add('visible')
     })
   </script>
 </body>
@@ -156,10 +168,10 @@ router.post('/logout', (req, res) => {
 // GET /documents
 router.get('/documents', requireAdmin, async (req, res) => {
   const docs = await listDocuments()
-  res.send(dashboardPage(docs))
+  res.send(dashboardPage(docs, [...indexingFiles]))
 })
 
-// POST /documents — upload, chunk, embed, store
+// POST /documents — upload, extract text, chunk, then embed in background
 router.post('/documents', requireAdmin, (req, res, next) => {
   upload.single('file')(req, res, (err) => {
     if (err) return res.status(400).send(escapeHtml(err.message))
@@ -190,8 +202,18 @@ router.post('/documents', requireAdmin, (req, res, next) => {
       chunk_text: chunk
     }))
 
-    await addChunks(chunks)
+    // Mark as indexing and respond immediately — don't block on embedding
+    indexingFiles.add(filename)
     res.redirect('/archie/admin/documents')
+
+    // Embed and store in background
+    addChunks(chunks)
+      .then(() => { indexingFiles.delete(filename) })
+      .catch(err => {
+        console.error('Background indexing error:', err)
+        indexingFiles.delete(filename)
+      })
+
   } catch (err) {
     console.error('Admin upload error:', err)
     res.status(500).send(`Upload failed: ${escapeHtml(err.message)}`)
