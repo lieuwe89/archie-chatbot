@@ -1,6 +1,10 @@
 app = "archie-chatbot"
 primary_region = "ams"
 
+[mounts]
+  source = "archie_data"
+  destination = "/data"
+
 [http_service]
   internal_port = 4008
   force_https = true
