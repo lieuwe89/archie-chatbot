@@ -1,10 +1,27 @@
 import fetch from 'node-fetch'
+import { recordCseRequest } from './archieSearchMonitor.js'
 
 const BEELDBANK_API_KEY = 'fd45b590-346a-11e5-a2cb-0800200c9a66'
 const GENEALOGY_API_KEY = '6976bb7e-0c61-4f03-bf5b-df645d5fd086'
+const CSE_API_KEY = process.env.GOOGLE_CSE_KEY
+const CSE_CX = process.env.GOOGLE_CSE_CX
 
 // Gemini function declarations
 export const toolDeclarations = [
+  {
+    name: 'searchGroningerarchieven',
+    description: 'Search www.groningerarchieven.nl for institutional information: opening hours, contact details, visitor info, collections overview, events, policies, reading room rules, and general archive information. Use this tool for questions about the Groninger Archieven as an institution. Do NOT use this for genealogical person records or historical images — use searchAlleGroningers and searchBeeldbank for those. Do NOT use this for research guides (onderzoeksgidsen) — those are available in the internal knowledge base, use that instead.',
+    parameters: {
+      type: 'object',
+      properties: {
+        q: {
+          type: 'string',
+          description: 'Search query, e.g. "openingstijden" or "aanvragen archiefstukken".'
+        }
+      },
+      required: ['q']
+    }
+  },
   {
     name: 'searchAlleGroningers',
     description: 'Search genealogical records (birth, marriage, death, baptism registers, etc.) in the Groninger Archieven via AlleGroningers. Use multiple calls with different parameters to find comprehensive results.',
@@ -80,6 +97,42 @@ export const toolDeclarations = [
     }
   }
 ]
+
+async function searchGroningerarchieven({ q }) {
+  if (!CSE_API_KEY || !CSE_CX) {
+    return { error: 'Google Custom Search not configured (GOOGLE_CSE_KEY / GOOGLE_CSE_CX missing).' }
+  }
+
+  const monitor = recordCseRequest()
+  if (monitor.overLimit) {
+    return { error: 'Daily Google Custom Search quota (100 requests) has been reached. Try again tomorrow.' }
+  }
+
+  try {
+    const params = new URLSearchParams({ key: CSE_API_KEY, cx: CSE_CX, q, num: 5 })
+    const response = await fetch(`https://www.googleapis.com/customsearch/v1?${params}`)
+    const data = await response.json()
+
+    if (data.error) {
+      return { error: `CSE API error: ${data.error.message}` }
+    }
+
+    const results = (data.items || []).map(item => ({
+      title: item.title,
+      url: item.link,
+      snippet: item.snippet
+    }))
+
+    return {
+      results,
+      total: data.searchInformation?.totalResults ?? 0,
+      usageToday: monitor.count,
+      nearDailyLimit: monitor.nearLimit
+    }
+  } catch (e) {
+    return { error: e.message }
+  }
+}
 
 async function searchAlleGroningers({ q, deed_type, gemeente, rows = 5, start = 0 }) {
   try {
@@ -169,6 +222,7 @@ function searchInventories() {
 
 export async function executeTool(name, args) {
   switch (name) {
+    case 'searchGroningerarchieven': return searchGroningerarchieven(args)
     case 'searchAlleGroningers': return searchAlleGroningers(args)
     case 'searchBeeldbank': return searchBeeldbank(args)
     case 'searchInventories': return searchInventories(args)
