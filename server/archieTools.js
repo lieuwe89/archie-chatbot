@@ -84,13 +84,55 @@ export const toolDeclarations = [
   },
   {
     name: 'searchInventories',
-    description: 'Search archive inventories and finding aids on www.groningerarchieven.nl. Use for questions about specific archive collections, inventory numbers, collection descriptions, and finding aids.',
+    description: 'Search archive inventories and finding aids on groningerarchieven.nl. Use for questions about specific archive collections, inventory numbers, collection descriptions, and finding aids.',
     parameters: {
       type: 'object',
       properties: {
         q: {
           type: 'string',
           description: 'Keyword search query, e.g. "inventarisnummer" or collection name.'
+        }
+      },
+      required: ['q']
+    }
+  },
+  {
+    name: 'searchDelpher',
+    description: 'Search Delpher (delpher.nl) for historical newspapers, books, and magazines. Excellent for finding mentions of people or events in contemporary news sources.',
+    parameters: {
+      type: 'object',
+      properties: {
+        q: {
+          type: 'string',
+          description: 'Search query (name, event, topic).'
+        }
+      },
+      required: ['q']
+    }
+  },
+  {
+    name: 'searchOpenArch',
+    description: 'Search genealogical data across many Dutch archives via OpenArch.nl. Useful when AlleGroningers yields no results.',
+    parameters: {
+      type: 'object',
+      properties: {
+        q: {
+          type: 'string',
+          description: 'Search query (name, place).'
+        }
+      },
+      required: ['q']
+    }
+  },
+  {
+    name: 'searchArchievenNL',
+    description: 'Search archieven.nl for archival collections and inventories across the Netherlands, including those of the Groninger Archieven.',
+    parameters: {
+      type: 'object',
+      properties: {
+        q: {
+          type: 'string',
+          description: 'Search query.'
         }
       },
       required: ['q']
@@ -187,7 +229,19 @@ async function searchSite(q, siteHost) {
 }
 
 async function searchGroningerarchieven({ q }) {
-  return searchSite(q, 'www.groningerarchieven.nl')
+  return searchSite(q, 'groningerarchieven.nl')
+}
+
+async function searchDelpher({ q }) {
+  return searchSite(q, 'delpher.nl')
+}
+
+async function searchOpenArch({ q }) {
+  return searchSite(q, 'openarch.nl')
+}
+
+async function searchArchievenNL({ q }) {
+  return searchSite(q, 'archieven.nl')
 }
 
 async function searchPoparchiefGroningen({ q }) {
@@ -285,7 +339,7 @@ async function searchBeeldbank({ q, rows = 5, start = 0, from_date, to_date }) {
 }
 
 async function searchInventories({ q }) {
-  return searchSite(q, 'www.groningerarchieven.nl')
+  return searchSite(q, 'groningerarchieven.nl')
 }
 
 export async function executeTool(name, args) {
@@ -296,6 +350,9 @@ export async function executeTool(name, args) {
     case 'searchAlleGroningers': return searchAlleGroningers(args)
     case 'searchBeeldbank': return searchBeeldbank(args)
     case 'searchInventories': return searchInventories(args)
+    case 'searchDelpher': return searchDelpher(args)
+    case 'searchOpenArch': return searchOpenArch(args)
+    case 'searchArchievenNL': return searchArchievenNL(args)
     case 'googleSearch': return googleSearch(args)
     default: return { error: `Unknown tool: ${name}` }
   }
