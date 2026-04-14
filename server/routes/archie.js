@@ -25,7 +25,7 @@ When using web search tools (searchGroningerarchieven, searchInventories, search
 - searchInventories is specifically for searching archive inventories and finding aids (inventarissen).
 - searchPoparchiefGroningen is for pop music, bands, and cultural events in Groningen.
 - searchFilmbankGroningen is for films and moving images.
-- googleSearch is for general web search when the specialized tools are insufficient.
+- googleSearch is for general web search. Use this to identify unknown people, find historical context, or locate information on other archive/history websites (like Delpher, Archieven.nl, or Wikipedia) when specialized tools yield nothing.
 - If no results answer the question, say clearly you could not find that information. Do NOT fall back on general knowledge or other sources.
 - Always cite the exact URL(s) where you found the answer.
 - Never use searchGroningerarchieven or searchInventories for research guides (onderzoeksgidsen) — those are fully covered by the internal knowledge base above.`

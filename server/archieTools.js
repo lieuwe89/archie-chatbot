@@ -126,7 +126,7 @@ export const toolDeclarations = [
   },
   {
     name: 'googleSearch',
-    description: 'Perform a general web search for information NOT found in the specialized archival tools. Use this sparingly for general historical context or identifying entities that might be found in the archives later.',
+    description: 'General web search. Use this to identify people, find historical background, or search other historical/archival websites (like Delpher, Wikipedia, or Archieven.nl). Essential when local archival tools yield no results for a specific person or topic.',
     parameters: {
       type: 'object',
       properties: {
