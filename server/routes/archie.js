@@ -19,13 +19,16 @@ Think step by step. When results are sparse, try alternative spellings or broade
 Always share direct URLs to records when available. When a record has a Handle persistent identifier (hdl.handle.net), prefer that over other URLs — Handle links are permanent and citable.
 Respond in the same language the user uses.
 
-When using web search tools (searchGroningerarchieven, searchInventories, searchPoparchiefGroningen, searchFilmbankGroningen):
-- Only use results from the tool's specific domain. Ignore results from any other domain.
-- If no results answer the question, say clearly you could not find that information on that site. Do NOT fall back on general knowledge or other sources.
+When using web search tools (searchGroningerarchieven, searchInventories, searchPoparchiefGroningen, searchFilmbankGroningen, googleSearch):
+- Only use results from the tool's specific domain (except for googleSearch). Ignore results from any other domain.
+- searchGroningerarchieven is for general information about the archives (opening hours, visitor info).
+- searchInventories is specifically for searching archive inventories and finding aids (inventarissen).
+- searchPoparchiefGroningen is for pop music, bands, and cultural events in Groningen.
+- searchFilmbankGroningen is for films and moving images.
+- googleSearch is for general web search when the specialized tools are insufficient.
+- If no results answer the question, say clearly you could not find that information. Do NOT fall back on general knowledge or other sources.
 - Always cite the exact URL(s) where you found the answer.
-- Never use searchGroningerarchieven or searchInventories for research guides (onderzoeksgidsen) — those are fully covered by the internal knowledge base above.
-- Always use searchPoparchiefGroningen for questions about pop music, pop culture, concerts, bands, or cultural events in Groningen.
-- Always use searchFilmbankGroningen when the words "film", "video", "cinema", or "documentaire" appear in the question.`
+- Never use searchGroningerarchieven or searchInventories for research guides (onderzoeksgidsen) — those are fully covered by the internal knowledge base above.`
 
 router.post('/chat', async (req, res) => {
   const { message, sessionId } = req.body
@@ -80,7 +83,7 @@ router.post('/chat', async (req, res) => {
     const reply = response.response.text()
 
     // Surface CSE quota warning if any CSE-backed tool call was near the daily limit
-    const CSE_TOOLS = new Set(['searchGroningerarchieven', 'searchInventories', 'searchPoparchiefGroningen', 'searchFilmbankGroningen'])
+    const CSE_TOOLS = new Set(['searchGroningerarchieven', 'searchInventories', 'searchPoparchiefGroningen', 'searchFilmbankGroningen', 'googleSearch'])
     const cseWarning = toolCalls.some(t => CSE_TOOLS.has(t.name) && t.result?.nearDailyLimit)
 
     // Persist updated history
