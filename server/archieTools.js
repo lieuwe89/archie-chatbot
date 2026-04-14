@@ -245,7 +245,31 @@ async function searchDelpher({ q }) {
 }
 
 async function searchOpenArch({ q }) {
-  return searchSite(q, 'openarch.nl')
+  try {
+    const params = new URLSearchParams({
+      name: q,
+      lang: 'nl',
+      number_of_results: 10
+    })
+    const url = `https://api.openarch.nl/1.0/search.json?${params}`
+    const response = await fetch(url)
+    const data = await response.json()
+    
+    const records = (data.result || []).map(item => ({
+      source: 'OpenArch',
+      title: `${item.voornaam || ''} ${item.tussenvoegsel || ''} ${item.achternaam || ''}`.trim() || q,
+      date: item.datum,
+      deed_type: item.brontype,
+      municipality: item.plaats,
+      url: `https://www.openarch.nl/show.php?archive=${item.archive}&identifier=${item.identifier}`,
+      description: `${item.rol}: ${item.voornaam} ${item.achternaam}`
+    }))
+    
+    return { records, total: data.number_of_results }
+  } catch (e) {
+    console.error('[OpenArch API ERROR]', e)
+    return { error: `OpenArch API error: ${e.message}` }
+  }
 }
 
 async function searchArchievenNL({ q }) {

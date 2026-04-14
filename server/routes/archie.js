@@ -155,7 +155,6 @@ router.post('/chat', async (req, res) => {
       'searchPoparchiefGroningen', 
       'searchFilmbankGroningen', 
       'searchDelpher', 
-      'searchOpenArch', 
       'searchArchievenNL', 
       'googleSearch'
     ])
