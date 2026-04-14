@@ -30,7 +30,11 @@ export const toolDeclarations = [
       properties: {
         q: {
           type: 'string',
-          description: 'Keyword search query. Can be a name, place, or combination.'
+          description: 'Keyword search query. Can be a name, place, or combination. Supports wildcards (*, ?) and fuzzy search (~).'
+        },
+        fuzzy: {
+          type: 'boolean',
+          description: 'If true, automatically perform a fuzzy search (spelling variations) on each word of the query.'
         },
         deed_type: {
           type: 'string',
@@ -118,7 +122,11 @@ export const toolDeclarations = [
       properties: {
         q: {
           type: 'string',
-          description: 'Search query (name, place).'
+          description: 'Search query (name, place). Supports wildcards (*, ?) and fuzzy search (~).'
+        },
+        fuzzy: {
+          type: 'boolean',
+          description: 'If true, automatically perform a fuzzy search (spelling variations) on each word of the query.'
         }
       },
       required: ['q']
@@ -244,10 +252,11 @@ async function searchDelpher({ q }) {
   return searchSite(q, 'delpher.nl')
 }
 
-async function searchOpenArch({ q }) {
+async function searchOpenArch({ q, fuzzy }) {
   try {
+    const query = fuzzy ? applyFuzzy(q) : q
     const params = new URLSearchParams({
-      name: q,
+      name: query,
       lang: 'nl',
       number_of_results: 10
     })
@@ -288,11 +297,24 @@ async function googleSearch({ q }) {
   return searchSite(q)
 }
 
-async function searchAlleGroningers({ q, deed_type, gemeente, rows = 5, start = 0 }) {
+function applyFuzzy(q) {
+  if (!q) return q
+  // Split by space, add ~ to each word if not already present and not a wildcard
+  return q.split(/\s+/)
+    .map(word => {
+      if (word.length < 3) return word // too short for fuzzy
+      if (word.includes('*') || word.includes('?') || word.includes('~')) return word
+      return `${word}~`
+    })
+    .join(' ')
+}
+
+async function searchAlleGroningers({ q, fuzzy, deed_type, gemeente, rows = 5, start = 0 }) {
   try {
+    const query = fuzzy ? applyFuzzy(q) : q
     const params = new URLSearchParams({
       apiKey: GENEALOGY_API_KEY,
-      q,
+      q: query,
       rows: Math.min(rows, 20),
       start
     })
