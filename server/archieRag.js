@@ -45,16 +45,38 @@ async function embedText(text) {
   return result.embedding.values
 }
 
+// Embed multiple texts in one API call (up to 100 per batch)
+async function embedBatch(texts) {
+  const model = getEmbeddingModel()
+  const result = await model.batchEmbedContents({
+    requests: texts.map(text => ({
+      model: 'models/gemini-embedding-001',
+      content: { parts: [{ text }] }
+    }))
+  })
+  return result.embeddings.map(e => e.values)
+}
+
+const EMBED_BATCH_SIZE = 50 // stay well under API limits
+
 // chunks: Array<{ id: string, source: string, title: string, chunk_text: string }>
 export async function addChunks(chunks) {
   const table = await getTable()
-  const records = await Promise.all(chunks.map(async chunk => ({
-    id: chunk.id,
-    source: chunk.source,
-    title: chunk.title,
-    chunk_text: chunk.chunk_text,
-    vector: await embedText(chunk.chunk_text)
-  })))
+  const records = []
+  // Batch embed: ~2 API calls for a large PDF instead of 150+
+  for (let i = 0; i < chunks.length; i += EMBED_BATCH_SIZE) {
+    const batch = chunks.slice(i, i + EMBED_BATCH_SIZE)
+    const vectors = await embedBatch(batch.map(c => c.chunk_text))
+    for (let j = 0; j < batch.length; j++) {
+      records.push({
+        id: batch[j].id,
+        source: batch[j].source,
+        title: batch[j].title,
+        chunk_text: batch[j].chunk_text,
+        vector: vectors[j]
+      })
+    }
+  }
   await table.add(records)
 }
 

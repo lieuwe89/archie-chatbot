@@ -90,8 +90,11 @@ function dashboardPage(docs) {
     .upload-section { display: flex; gap: 0.5rem; margin-bottom: 2rem; }
     input[type=file] { flex: 1; border: 1px solid #ddd; border-radius: 4px; padding: 0.4rem; }
     button.primary { background: #d97706; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; }
+    button.primary:disabled { background: #f59e0b; cursor: not-allowed; }
     table { width: 100%; border-collapse: collapse; }
     th { text-align: left; border-bottom: 2px solid #eee; padding: 0.5rem 0; font-size: 0.875rem; color: #666; }
+    #upload-status { display: none; margin-bottom: 1rem; font-size: 0.875rem; color: #d97706; }
+    #upload-status.visible { display: block; }
   </style>
 </head>
 <body>
@@ -102,16 +105,24 @@ function dashboardPage(docs) {
         <button type="submit" style="background:none;border:none;color:#666;cursor:pointer;font-size:0.875rem">Log out</button>
       </form>
     </div>
-    <p class="subtitle">Upload documents to expand Archie's knowledge. Accepts .txt, .md, .pdf</p>
-    <form method="POST" action="/archie/admin/documents" enctype="multipart/form-data" class="upload-section">
+    <p class="subtitle">Upload documents to expand Archie's knowledge. Accepts .txt, .md, .pdf (max 10 MB)</p>
+    <form id="upload-form" method="POST" action="/archie/admin/documents" enctype="multipart/form-data" class="upload-section">
       <input type="file" name="file" accept=".txt,.md,.pdf" required>
-      <button type="submit" class="primary">Upload</button>
+      <button type="submit" class="primary" id="upload-btn">Upload</button>
     </form>
+    <div id="upload-status">Uploading and indexing… Large PDFs may take a minute or two. Please wait.</div>
     <table>
       <thead><tr><th>Document</th><th></th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
   </div>
+  <script>
+    document.getElementById('upload-form').addEventListener('submit', function() {
+      document.getElementById('upload-btn').disabled = true
+      document.getElementById('upload-btn').textContent = 'Uploading…'
+      document.getElementById('upload-status').classList.add('visible')
+    })
+  </script>
 </body>
 </html>`
 }
