@@ -90,9 +90,18 @@ const ArchieInterface = () => {
 
     try {
       const response = await api.archie.chat(userMessage, sessionIdRef.current)
+      let finalContent = response.reply
+      
+      // If the reply is empty, but we had tool calls, maybe the model just forgot to summarize
+      if (!finalContent && response.toolCalls?.length > 0) {
+        finalContent = "Ik heb de zoekopdrachten uitgevoerd, maar kon geen samenvatting genereren. Controleer de zoekresultaten hierboven."
+      } else if (!finalContent) {
+        finalContent = t('archie.noResponse')
+      }
+
       setMessages(prev => [...prev, {
         type: 'assistant',
-        content: response.reply || t('archie.noResponse'),
+        content: finalContent,
         timestamp: new Date(),
         toolCalls: response.toolCalls || []
       }])

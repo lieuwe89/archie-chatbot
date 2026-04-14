@@ -1,6 +1,6 @@
 // server/routes/archie.js
 import express from 'express'
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai'
 import { getOrCreate, update } from '../archieSession.js'
 import { toolDeclarations, executeTool } from '../archieTools.js'
 import { retrieve } from '../archieRag.js'
@@ -52,7 +52,25 @@ router.post('/chat', async (req, res) => {
     const model = genAI.getGenerativeModel({
       model: 'gemini-2.5-flash',
       tools: [{ functionDeclarations: toolDeclarations }],
-      systemInstruction
+      systemInstruction,
+      safetySettings: [
+        {
+          category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+          threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+        },
+        {
+          category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+          threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+        },
+        {
+          category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+          threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+        },
+        {
+          category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+          threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
+        },
+      ],
     })
 
     const chat = model.startChat({ history: session.contents })
@@ -80,7 +98,19 @@ router.post('/chat', async (req, res) => {
       response = await chat.sendMessage(functionResponses)
     }
 
-    const reply = response.response.text()
+    let reply = ''
+    try {
+      reply = response.response.text()
+    } catch (e) {
+      console.warn('[Archie] Error calling text() - possibly blocked:', e.message)
+      if (response.response.promptFeedback?.blockReason) {
+         console.warn('[Archie] Block reason:', response.response.promptFeedback.blockReason)
+      }
+    }
+
+    if (!reply) {
+      console.warn('[Archie] Empty reply from Gemini. Response object:', JSON.stringify(response.response, null, 2))
+    }
 
     // Surface CSE quota warning if any CSE-backed tool call was near the daily limit
     const CSE_TOOLS = new Set(['searchGroningerarchieven', 'searchInventories', 'searchPoparchiefGroningen', 'searchFilmbankGroningen', 'googleSearch'])
