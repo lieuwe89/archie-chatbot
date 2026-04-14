@@ -13,18 +13,26 @@ async function extractPdfText(buffer) {
 }
 
 const router = express.Router()
-const upload = multer({
+
+// Multer for individual chunks (max 512KB each)
+const chunkUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    const extOk = /\.(txt|md|pdf)$/i.test(file.originalname)
-    if (extOk) cb(null, true)
-    else cb(new Error('Only .txt, .md, and .pdf files are allowed'))
-  }
+  limits: { fileSize: 512 * 1024 }
 })
 
 // Track files currently being indexed (in-memory; resets on restart)
 const indexingFiles = new Set()
+
+// Pending chunked uploads: uploadId → { filename, total, chunks: Buffer[] }
+const pendingUploads = new Map()
+
+// Clean up stale incomplete uploads older than 1 hour
+setInterval(() => {
+  const cutoff = Date.now() - 60 * 60 * 1000
+  for (const [id, upload] of pendingUploads) {
+    if (upload.startedAt < cutoff) pendingUploads.delete(id)
+  }
+}, 10 * 60 * 1000)
 
 function requireAdmin(req, res, next) {
   if (req.session?.archieAdmin) return next()
@@ -103,12 +111,15 @@ function dashboardPage(docs, pendingFiles = []) {
     .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); max-width: 640px; margin: 0 auto; }
     h1 { margin: 0 0 0.25rem; font-size: 1.25rem; }
     .subtitle { color: #666; font-size: 0.875rem; margin-bottom: 1.5rem; }
-    .upload-section { display: flex; gap: 0.5rem; margin-bottom: 2rem; }
+    .upload-section { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
     input[type=file] { flex: 1; border: 1px solid #ddd; border-radius: 4px; padding: 0.4rem; }
-    button.primary { background: #d97706; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; }
+    button.primary { background: #d97706; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; white-space: nowrap; }
     button.primary:disabled { background: #f59e0b; cursor: not-allowed; }
     table { width: 100%; border-collapse: collapse; }
     th { text-align: left; border-bottom: 2px solid #eee; padding: 0.5rem 0; font-size: 0.875rem; color: #666; }
+    #upload-progress { display: none; margin-bottom: 1rem; }
+    #upload-progress progress { width: 100%; height: 6px; accent-color: #d97706; }
+    #upload-error { display: none; color: #dc2626; font-size: 0.875rem; margin-bottom: 1rem; }
   </style>
 </head>
 <body>
@@ -120,20 +131,76 @@ function dashboardPage(docs, pendingFiles = []) {
       </form>
     </div>
     <p class="subtitle">Upload documents to expand Archie's knowledge. Accepts .txt, .md, .pdf (max 10 MB)</p>
-    <form id="upload-form" method="POST" action="/archie/admin/documents" enctype="multipart/form-data" class="upload-section">
-      <input type="file" name="file" accept=".txt,.md,.pdf" required>
-      <button type="submit" class="primary" id="upload-btn">Upload</button>
-    </form>
+    <div class="upload-section">
+      <input type="file" id="file-input" accept=".txt,.md,.pdf">
+      <button class="primary" id="upload-btn" onclick="startUpload()">Upload</button>
+    </div>
+    <div id="upload-progress"><progress id="progress-bar" value="0" max="100"></progress> <span id="progress-label" style="font-size:0.8rem;color:#666"></span></div>
+    <div id="upload-error"></div>
     <table>
       <thead><tr><th>Document</th><th></th></tr></thead>
       <tbody>${pendingRows}${docRows}</tbody>
     </table>
   </div>
   <script>
-    document.getElementById('upload-form').addEventListener('submit', function() {
-      document.getElementById('upload-btn').disabled = true
-      document.getElementById('upload-btn').textContent = 'Uploading…'
-    })
+    const CHUNK_SIZE = 256 * 1024 // 256 KB per chunk — avoids proxy body-stream timeouts
+
+    async function startUpload() {
+      const fileInput = document.getElementById('file-input')
+      const file = fileInput.files[0]
+      if (!file) { alert('Please select a file first.'); return }
+
+      const allowed = /\\.(txt|md|pdf)$/i.test(file.name)
+      if (!allowed) { alert('Only .txt, .md, and .pdf files are allowed.'); return }
+      if (file.size > 10 * 1024 * 1024) { alert('File exceeds 10 MB limit.'); return }
+
+      const btn = document.getElementById('upload-btn')
+      const progressEl = document.getElementById('upload-progress')
+      const progressBar = document.getElementById('progress-bar')
+      const progressLabel = document.getElementById('progress-label')
+      const errorEl = document.getElementById('upload-error')
+
+      btn.disabled = true
+      errorEl.style.display = 'none'
+      progressEl.style.display = 'block'
+
+      const uploadId = Date.now().toString(36) + Math.random().toString(36).slice(2)
+      const totalChunks = Math.max(1, Math.ceil(file.size / CHUNK_SIZE))
+
+      try {
+        for (let i = 0; i < totalChunks; i++) {
+          const start = i * CHUNK_SIZE
+          const chunk = file.slice(start, start + CHUNK_SIZE)
+
+          progressBar.value = Math.round((i / totalChunks) * 100)
+          progressLabel.textContent = totalChunks > 1
+            ? \`Uploading… \${progressBar.value}%\`
+            : 'Uploading…'
+
+          const fd = new FormData()
+          fd.append('chunk', chunk, file.name)
+          fd.append('uploadId', uploadId)
+          fd.append('chunkIndex', String(i))
+          fd.append('totalChunks', String(totalChunks))
+          fd.append('filename', file.name)
+
+          const resp = await fetch('/archie/admin/upload-chunk', { method: 'POST', body: fd })
+          if (!resp.ok) {
+            const msg = await resp.text()
+            throw new Error(msg || resp.statusText)
+          }
+        }
+
+        progressBar.value = 100
+        progressLabel.textContent = 'Indexing in background…'
+        setTimeout(() => { window.location.href = '/archie/admin/documents' }, 800)
+      } catch (err) {
+        progressEl.style.display = 'none'
+        errorEl.textContent = 'Upload failed: ' + err.message
+        errorEl.style.display = 'block'
+        btn.disabled = false
+      }
+    }
   </script>
 </body>
 </html>`
@@ -171,30 +238,59 @@ router.get('/documents', requireAdmin, async (req, res) => {
   res.send(dashboardPage(docs, [...indexingFiles]))
 })
 
-// POST /documents — upload, then extract/chunk/embed entirely in background
-router.post('/documents', requireAdmin, (req, res, next) => {
-  upload.single('file')(req, res, (err) => {
-    if (err) return res.status(400).send(escapeHtml(err.message))
+// POST /upload-chunk — receives one 256 KB slice; reassembles and indexes when all arrive
+router.post('/upload-chunk', requireAdmin, (req, res, next) => {
+  chunkUpload.single('chunk')(req, res, (err) => {
+    if (err) return res.status(400).json({ error: err.message })
     next()
   })
 }, (req, res) => {
-  if (!req.file) return res.status(400).send('No file uploaded.')
+  const { uploadId, chunkIndex, totalChunks, filename } = req.body
+  const chunk = req.file
 
-  const filename = req.file.originalname
-  const buffer = req.file.buffer
+  if (!chunk) return res.status(400).json({ error: 'No chunk received.' })
+  if (!uploadId || chunkIndex == null || !totalChunks || !filename) {
+    return res.status(400).json({ error: 'Missing upload metadata.' })
+  }
 
-  // Respond immediately — all processing happens in background
+  const extOk = /\.(txt|md|pdf)$/i.test(filename)
+  if (!extOk) return res.status(400).json({ error: 'Only .txt, .md, and .pdf files are allowed.' })
+
+  const idx = parseInt(chunkIndex, 10)
+  const total = parseInt(totalChunks, 10)
+
+  if (!pendingUploads.has(uploadId)) {
+    pendingUploads.set(uploadId, {
+      filename,
+      total,
+      chunks: new Array(total).fill(null),
+      startedAt: Date.now()
+    })
+  }
+
+  const upload = pendingUploads.get(uploadId)
+  upload.chunks[idx] = chunk.buffer
+
+  const received = upload.chunks.filter(Boolean).length
+
+  if (received < total) {
+    return res.json({ status: 'partial', received, total })
+  }
+
+  // All chunks received — assemble and kick off background processing
+  const completeBuffer = Buffer.concat(upload.chunks)
+  pendingUploads.delete(uploadId)
+
   indexingFiles.add(filename)
-  res.redirect('/archie/admin/documents')
+  res.json({ status: 'indexing' })
 
-  // Extract, chunk, and embed in background (PDF parsing can be slow)
   ;(async () => {
     try {
       let text
       if (filename.endsWith('.pdf')) {
-        text = await extractPdfText(buffer)
+        text = await extractPdfText(completeBuffer)
       } else {
-        text = buffer.toString('utf8')
+        text = completeBuffer.toString('utf8')
       }
 
       if (!text.trim()) {
@@ -203,14 +299,14 @@ router.post('/documents', requireAdmin, (req, res, next) => {
       }
 
       const textChunks = chunkText(text)
-      const chunks = textChunks.map((chunk, i) => ({
+      const ragChunks = textChunks.map((c, i) => ({
         id: `${filename}-${i}-${crypto.randomUUID()}`,
         source: filename,
         title: filename,
-        chunk_text: chunk
+        chunk_text: c
       }))
 
-      await addChunks(chunks)
+      await addChunks(ragChunks)
     } catch (err) {
       console.error('Background indexing error:', err)
     } finally {
