@@ -1,4 +1,5 @@
 import React from 'react';
+import i18n from '../i18n/index.js';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -11,7 +12,6 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    // Log error to console in development
     if (process.env.NODE_ENV === 'development') {
       console.error('Error caught by ErrorBoundary:', error, errorInfo);
     }
@@ -37,16 +37,16 @@ class ErrorBoundary extends React.Component {
                 />
               </svg>
               <h2 className="mt-4 text-xl font-semibold text-gray-900 dark:text-white">
-                Oops! Something went wrong
+                {i18n.t('error.title')}
               </h2>
               <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                An unexpected error occurred. Please refresh the page to try again.
+                {i18n.t('error.message')}
               </p>
               <button
                 onClick={() => window.location.reload()}
                 className="mt-4 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors"
               >
-                Refresh Page
+                {i18n.t('error.refresh')}
               </button>
             </div>
           </div>

@@ -1,0 +1,78 @@
+{
+  "archie": {
+    "title": "Archie",
+    "subtitle": "Groningen Archive Assistant",
+    "welcome": "Hello! I'm Archie, your archive assistant. I can help you find people in AlleGroningers, images in the Beeldbank (photos, maps, drawings, and prints), or historical collections in the Groningen Archives. What are you looking for today?",
+    "searchingVaults": "Archie is searching the vaults…",
+    "placeholder": "Ask about a person, place, or historical topic…",
+    "tip": "Tip: Try 'What is the oldest baptism in the Akerk?' or a family name.",
+    "noResponse": "No response received.",
+    "errorMessage": "I'm sorry, I encountered an error. Please try again later.",
+    "searchesPerformed_one": "{{count}} search performed",
+    "searchesPerformed_other": "{{count}} searches performed",
+    "searchAlleGroningers": "Searched AlleGroningers",
+    "searchBeeldbank": "Searched Beeldbank",
+    "searchInventories": "Searched inventories",
+    "calledTool": "Called {{name}}"
+  },
+  "login": {
+    "welcomeBack": "Welcome Back",
+    "subtitle": "Sign in to your account",
+    "username": "Username",
+    "password": "Password",
+    "usernamePlaceholder": "Enter your username",
+    "passwordPlaceholder": "Enter your password",
+    "signingIn": "Signing in...",
+    "signIn": "Sign In",
+    "credentials": "Enter your credentials to access the application",
+    "errorBoth": "Please enter both username and password"
+  },
+  "error": {
+    "title": "Oops! Something went wrong",
+    "message": "An unexpected error occurred. Please refresh the page to try again.",
+    "refresh": "Refresh Page"
+  },
+  "version": {
+    "updateAvailable": "Update Available",
+    "newVersionReady": "A new version is ready",
+    "currentVersion": "Current Version",
+    "latestVersion": "Latest Version",
+    "howToUpgrade": "How to upgrade:",
+    "upgradeNote": "Run this command in your project directory to update to the latest version.",
+    "later": "Later",
+    "copyCommand": "Copy Command"
+  },
+  "tabs": {
+    "chat": "Chat",
+    "shell": "Shell",
+    "files": "Files",
+    "sourceControl": "Source Control"
+  },
+  "main": {
+    "newSession": "New Session",
+    "projectFiles": "Project Files",
+    "sourceControl": "Source Control",
+    "loading": "Loading…",
+    "settingUpWorkspace": "Setting up your workspace...",
+    "chooseProject": "Choose Your Project",
+    "chooseProjectDesc": "Select a project from the sidebar to start coding. Each project contains your chat sessions and file history.",
+    "tipMobile": "Tap the menu button above to access projects",
+    "tipDesktop": "Create a new project by clicking the folder icon in the sidebar"
+  },
+  "settings": {
+    "quickSettings": "Quick Settings",
+    "appearance": "Appearance",
+    "darkMode": "Dark Mode",
+    "toolDisplay": "Tool Display",
+    "autoExpandTools": "Auto-expand tools",
+    "showRawParameters": "Show raw parameters",
+    "viewOptions": "View Options",
+    "autoScrollToBottom": "Auto-scroll to bottom",
+    "closePanel": "Close settings panel",
+    "openPanel": "Open settings panel"
+  },
+  "language": {
+    "switchTo": "NL",
+    "current": "EN"
+  }
+}

@@ -2,6 +2,8 @@
 import React, { useState, useEffect, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { useTranslation } from 'react-i18next'
+import i18n from '../i18n/index.js'
 import { api } from '../utils/api'
 import { History, ExternalLink, Loader2, Send, ChevronDown, ChevronUp, Search } from 'lucide-react'
 
@@ -14,10 +16,34 @@ function getOrCreateSessionId() {
   return id
 }
 
+const LanguageToggle = () => {
+  const { t } = useTranslation()
+  const [lang, setLang] = useState(i18n.language)
+
+  const toggle = () => {
+    const next = lang === 'nl' ? 'en' : 'nl'
+    i18n.changeLanguage(next)
+    localStorage.setItem('archie-language', next)
+    setLang(next)
+  }
+
+  return (
+    <button
+      onClick={toggle}
+      className="ml-auto text-xs font-semibold px-2.5 py-1 rounded-md border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+      title={t('language.switchTo')}
+    >
+      {t('language.switchTo')}
+    </button>
+  )
+}
+
 const ArchieInterface = () => {
-  const [messages, setMessages] = useState([{
+  const { t } = useTranslation()
+
+  const [messages, setMessages] = useState(() => [{
     type: 'assistant',
-    content: "Hello! I'm Archie, your archive assistant. I can help you find people in AlleGroningers, images in the Beeldbank (photos, maps, drawings, and prints), or historical collections in the Groningen Archives. What are you looking for today?",
+    content: i18n.t('archie.welcome'),
     timestamp: new Date(),
     toolCalls: []
   }])
@@ -33,6 +59,20 @@ const ArchieInterface = () => {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  // Update welcome message when language changes
+  useEffect(() => {
+    const handleLanguageChange = () => {
+      setMessages(prev => {
+        if (prev.length === 1 && prev[0].type === 'assistant') {
+          return [{ ...prev[0], content: i18n.t('archie.welcome') }]
+        }
+        return prev
+      })
+    }
+    i18n.on('languageChanged', handleLanguageChange)
+    return () => i18n.off('languageChanged', handleLanguageChange)
+  }, [])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -52,7 +92,7 @@ const ArchieInterface = () => {
       const response = await api.archie.chat(userMessage, sessionIdRef.current)
       setMessages(prev => [...prev, {
         type: 'assistant',
-        content: response.reply || 'Geen antwoord ontvangen.',
+        content: response.reply || t('archie.noResponse'),
         timestamp: new Date(),
         toolCalls: response.toolCalls || []
       }])
@@ -60,7 +100,7 @@ const ArchieInterface = () => {
       console.error('Archie Chat Error:', error)
       setMessages(prev => [...prev, {
         type: 'assistant',
-        content: "I'm sorry, I encountered an error. Please try again later.",
+        content: t('archie.errorMessage'),
         timestamp: new Date(),
         toolCalls: []
       }])
@@ -77,9 +117,10 @@ const ArchieInterface = () => {
           <History className="w-6 h-6 text-amber-600 dark:text-amber-400" />
         </div>
         <div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white leading-none">Archie</h1>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Groningen Archive Assistant</p>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white leading-none">{t('archie.title')}</h1>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('archie.subtitle')}</p>
         </div>
+        <LanguageToggle />
       </div>
 
       {/* Chat Area */}
@@ -124,7 +165,7 @@ const ArchieInterface = () => {
           <div className="flex justify-start">
             <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl rounded-bl-none p-4 shadow-sm flex items-center space-x-2">
               <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
-              <span className="text-sm text-gray-500">Archie is searching the vaults…</span>
+              <span className="text-sm text-gray-500">{t('archie.searchingVaults')}</span>
             </div>
           </div>
         )}
@@ -138,7 +179,7 @@ const ArchieInterface = () => {
             type="text"
             value={input}
             onChange={e => setInput(e.target.value)}
-            placeholder="Ask about a person, place, or historical topic…"
+            placeholder={t('archie.placeholder')}
             className="w-full pl-4 pr-12 py-3 bg-gray-100 dark:bg-gray-800 border-none rounded-xl focus:ring-2 focus:ring-amber-500 dark:text-white"
             disabled={isLoading}
           />
@@ -151,7 +192,7 @@ const ArchieInterface = () => {
           </button>
         </form>
         <p className="text-[10px] text-center text-gray-400 mt-2">
-          Tip: Try "What is the oldest baptism in the Akerk?" or a family name.
+          {t('archie.tip')}
         </p>
       </div>
     </div>
@@ -159,14 +200,15 @@ const ArchieInterface = () => {
 }
 
 const ToolCallList = ({ toolCalls }) => {
+  const { t } = useTranslation()
   const hasImages = toolCalls.some(tc => tc.result?.records?.some(r => r.thumbnail))
   const [expanded, setExpanded] = useState(hasImages)
 
   const labelFor = (name) => ({
-    searchAlleGroningers: 'Searched AlleGroningers',
-    searchBeeldbank: 'Searched Beeldbank',
-    searchInventories: 'Searched inventories'
-  }[name] || `Called ${name}`)
+    searchAlleGroningers: t('archie.searchAlleGroningers'),
+    searchBeeldbank: t('archie.searchBeeldbank'),
+    searchInventories: t('archie.searchInventories')
+  }[name] || t('archie.calledTool', { name }))
 
   return (
     <div className="mb-3 border border-amber-200 dark:border-amber-800 rounded-lg overflow-hidden">
@@ -176,7 +218,7 @@ const ToolCallList = ({ toolCalls }) => {
       >
         <span className="flex items-center gap-1.5">
           <Search className="w-3 h-3" />
-          {toolCalls.length} search{toolCalls.length !== 1 ? 'es' : ''} performed
+          {t('archie.searchesPerformed', { count: toolCalls.length })}
         </span>
         {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
       </button>
