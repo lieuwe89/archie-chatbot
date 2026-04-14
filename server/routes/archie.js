@@ -123,14 +123,25 @@ router.post('/chat', async (req, res) => {
     try {
       reply = response.response.text()
     } catch (e) {
-      console.warn('[Archie] Error calling text() - possibly blocked:', e.message)
-      if (response.response.promptFeedback?.blockReason) {
-         console.warn('[Archie] Block reason:', response.response.promptFeedback.blockReason)
+      const candidate = response.response.candidates?.[0]
+      const finishReason = candidate?.finishReason
+      console.warn('[Archie] Error calling text() - possibly blocked. Reason:', finishReason, e.message)
+      
+      if (finishReason === 'SAFETY') {
+        reply = 'Mijn excuses, maar mijn antwoord is geblokkeerd door veiligheidsfilters vanwege de inhoud van de gevonden resultaten. Probeer uw vraag specifieker te maken.'
+      } else if (finishReason === 'RECITATION') {
+        reply = 'Mijn antwoord is geblokkeerd omdat het te veel leek op een letterlijke brontekst met copyright.'
+      } else if (finishReason === 'OTHER') {
+        reply = 'Er is een onbekende fout opgetreden in de verwerking van het antwoord (finishReason: OTHER).'
       }
     }
 
-    if (!reply) {
-      console.warn('[Archie] Empty reply from Gemini. Response object:', JSON.stringify(response.response, null, 2))
+    if (!reply && !toolCalls.length) {
+      // Final check for candidate status if reply is still empty
+      const candidate = response.response.candidates?.[0]
+      if (candidate?.finishReason && candidate.finishReason !== 'STOP') {
+        reply = `Geen antwoord gegenereerd (Reden: ${candidate.finishReason}).`
+      }
     }
 
     // Surface CSE quota warning if any CSE-backed tool call was near the daily limit
