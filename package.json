@@ -1,6 +1,6 @@
 {
   "name": "archie-chatbot",
-  "version": "1.8.5",
+  "version": "1.9.0",
   "description": "AI chatbot for the Groninger Archieven",
   "type": "module",
   "main": "server/index.js",
@@ -43,6 +43,7 @@
     "cors": "^2.8.5",
     "express": "^4.18.2",
     "express-session": "^1.19.0",
+    "i18next": "^26.0.4",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.515.0",
     "mime-types": "^3.0.1",
@@ -52,6 +53,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-dropzone": "^14.2.3",
+    "react-i18next": "^17.0.2",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^6.8.1",
     "react-syntax-highlighter": "^15.6.6",

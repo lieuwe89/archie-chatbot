@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  ChevronLeft, 
-  ChevronRight, 
-  Maximize2, 
-  Eye, 
+import {
+  ChevronLeft,
+  ChevronRight,
+  Maximize2,
+  Eye,
   Settings2,
   Moon,
   Sun,
@@ -13,6 +13,7 @@ import {
   Sparkles,
   FileText
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import DarkModeToggle from './DarkModeToggle';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -27,6 +28,7 @@ const QuickSettingsPanel = ({
   onAutoScrollChange,
   isMobile
 }) => {
+  const { t } = useTranslation();
   const [localIsOpen, setLocalIsOpen] = useState(isOpen);
   const [whisperMode, setWhisperMode] = useState(() => {
     return localStorage.getItem('whisperMode') || 'default';
@@ -54,7 +56,7 @@ const QuickSettingsPanel = ({
         <button
           onClick={handleToggle}
           className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-l-md p-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors shadow-lg"
-          aria-label={localIsOpen ? 'Close settings panel' : 'Open settings panel'}
+          aria-label={localIsOpen ? t('settings.closePanel') : t('settings.openPanel')}
         >
           {localIsOpen ? (
             <ChevronRight className="h-5 w-5 text-gray-600 dark:text-gray-400" />
@@ -75,7 +77,7 @@ const QuickSettingsPanel = ({
           <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
               <Settings2 className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-              Quick Settings
+              {t('settings.quickSettings')}
             </h3>
           </div>
 
@@ -83,12 +85,12 @@ const QuickSettingsPanel = ({
           <div className={`flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-6 bg-white dark:bg-gray-900 ${isMobile ? 'pb-20' : ''}`}>
             {/* Appearance Settings */}
             <div className="space-y-2">
-              <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Appearance</h4>
-              
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">{t('settings.appearance')}</h4>
+
               <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border border-transparent hover:border-gray-300 dark:hover:border-gray-600">
                 <span className="flex items-center gap-2 text-sm text-gray-900 dark:text-white">
                   {isDarkMode ? <Moon className="h-4 w-4 text-gray-600 dark:text-gray-400" /> : <Sun className="h-4 w-4 text-gray-600 dark:text-gray-400" />}
-                  Dark Mode
+                  {t('settings.darkMode')}
                 </span>
                 <DarkModeToggle />
               </div>
@@ -96,12 +98,12 @@ const QuickSettingsPanel = ({
 
             {/* Tool Display Settings */}
             <div className="space-y-2">
-              <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Tool Display</h4>
-              
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">{t('settings.toolDisplay')}</h4>
+
               <label className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors border border-transparent hover:border-gray-300 dark:hover:border-gray-600">
                 <span className="flex items-center gap-2 text-sm text-gray-900 dark:text-white">
                   <Maximize2 className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                  Auto-expand tools
+                  {t('settings.autoExpandTools')}
                 </span>
                 <input
                   type="checkbox"
@@ -114,7 +116,7 @@ const QuickSettingsPanel = ({
               <label className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors border border-transparent hover:border-gray-300 dark:hover:border-gray-600">
                 <span className="flex items-center gap-2 text-sm text-gray-900 dark:text-white">
                   <Eye className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                  Show raw parameters
+                  {t('settings.showRawParameters')}
                 </span>
                 <input
                   type="checkbox"
@@ -126,12 +128,12 @@ const QuickSettingsPanel = ({
             </div>
             {/* View Options */}
             <div className="space-y-2">
-              <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">View Options</h4>
-              
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">{t('settings.viewOptions')}</h4>
+
               <label className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors border border-transparent hover:border-gray-300 dark:hover:border-gray-600">
                 <span className="flex items-center gap-2 text-sm text-gray-900 dark:text-white">
                   <ArrowDown className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                  Auto-scroll to bottom
+                  {t('settings.autoScrollToBottom')}
                 </span>
                 <input
                   type="checkbox"
