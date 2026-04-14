@@ -5,7 +5,9 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const DB_PATH = path.join(__dirname, 'database', 'archie-vectors')
+const DB_PATH = process.env.DATA_DIR
+  ? path.join(process.env.DATA_DIR, 'archie-vectors')
+  : path.join(__dirname, 'database', 'archie-vectors')
 const EMBEDDING_DIM = 3072
 
 let _table = null

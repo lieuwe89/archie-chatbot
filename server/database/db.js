@@ -7,7 +7,9 @@ import { dirname } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const DB_PATH = path.join(__dirname, 'geminicliui_auth.db');
+const DB_PATH = process.env.DATA_DIR
+  ? path.join(process.env.DATA_DIR, 'geminicliui_auth.db')
+  : path.join(__dirname, 'geminicliui_auth.db');
 const INIT_SQL_PATH = path.join(__dirname, 'init.sql');
 
 // Create database connection
