@@ -1,10 +1,17 @@
 import fetch from 'node-fetch'
-import { recordCseRequest } from './archieSearchMonitor.js'
+import { recordSearchRequest } from './archieSearchMonitor.js'
 
 const BEELDBANK_API_KEY = 'fd45b590-346a-11e5-a2cb-0800200c9a66'
 const GENEALOGY_API_KEY = '6976bb7e-0c61-4f03-bf5b-df645d5fd086'
-const CSE_API_KEY = process.env.GOOGLE_CSE_KEY
-const CSE_CX = process.env.GOOGLE_CSE_CX
+const TAVILY_API_KEY = process.env.TAVILY_API_KEY
+
+// Domains available for Tavily web search
+const TAVILY_DOMAINS = [
+  'groningerarchieven.nl',
+  'poparchiefgroningen.nl',
+  'filmbankgroningen.nl',
+  'groningerkentekens.nl'
+]
 
 // Gemini function declarations
 export const toolDeclarations = [
@@ -87,34 +94,6 @@ export const toolDeclarations = [
     }
   },
   {
-    name: 'searchInventories',
-    description: 'Search archive inventories and finding aids on groningerarchieven.nl. Use for questions about specific archive collections, inventory numbers, collection descriptions, and finding aids.',
-    parameters: {
-      type: 'object',
-      properties: {
-        q: {
-          type: 'string',
-          description: 'Keyword search query, e.g. "inventarisnummer" or collection name.'
-        }
-      },
-      required: ['q']
-    }
-  },
-  {
-    name: 'searchDelpher',
-    description: 'Search Delpher (delpher.nl) for historical newspapers, books, and magazines. Excellent for finding mentions of people or events in contemporary news sources.',
-    parameters: {
-      type: 'object',
-      properties: {
-        q: {
-          type: 'string',
-          description: 'Search query (name, event, topic).'
-        }
-      },
-      required: ['q']
-    }
-  },
-  {
     name: 'searchOpenArch',
     description: 'Search genealogical data across many Dutch archives via OpenArch.nl. Useful when AlleGroningers yields no results.',
     parameters: {
@@ -127,20 +106,6 @@ export const toolDeclarations = [
         fuzzy: {
           type: 'boolean',
           description: 'If true, automatically perform a fuzzy search (spelling variations) on each word of the query.'
-        }
-      },
-      required: ['q']
-    }
-  },
-  {
-    name: 'searchArchievenNL',
-    description: 'Search archieven.nl for archival collections and inventories across the Netherlands, including those of the Groninger Archieven.',
-    parameters: {
-      type: 'object',
-      properties: {
-        q: {
-          type: 'string',
-          description: 'Search query.'
         }
       },
       required: ['q']
@@ -175,14 +140,14 @@ export const toolDeclarations = [
     }
   },
   {
-    name: 'googleSearch',
-    description: 'General web search. Use this to identify people, find historical background, or search other historical/archival websites (like Delpher, Wikipedia, or Archieven.nl). Essential when local archival tools yield no results for a specific person or topic.',
+    name: 'searchGroningerkentekens',
+    description: 'Search groningerkentekens.nl for information about historical vehicle licence plates (kentekens) from the province of Groningen.',
     parameters: {
       type: 'object',
       properties: {
         q: {
           type: 'string',
-          description: 'Search query.'
+          description: 'Search query, e.g. a licence plate number, vehicle type, or owner name.'
         }
       },
       required: ['q']
@@ -190,71 +155,85 @@ export const toolDeclarations = [
   }
 ]
 
-// Shared helper: search a specific site via Google Custom Search API
-async function searchSite(q, siteHost) {
-  if (!CSE_API_KEY || !CSE_CX) {
-    return { error: 'Google Custom Search not configured (GOOGLE_CSE_KEY / GOOGLE_CSE_CX missing).' }
+// Shared helper: search via Tavily, optionally restricted to specific domains
+async function searchSite(q, includeDomains) {
+  if (!TAVILY_API_KEY) {
+    return { error: 'Tavily API not configured (TAVILY_API_KEY missing).' }
   }
 
-  const monitor = recordCseRequest()
-  if (monitor.overLimit) {
-    return { error: 'Daily Google Custom Search quota (100 requests) has been reached. Try again tomorrow.' }
-  }
+  const monitor = recordSearchRequest()
 
   try {
-    const params = new URLSearchParams({
-      key: CSE_API_KEY,
-      cx: CSE_CX,
-      q,
-      num: 5
-    })
-    
-    // Log masked config for debugging
-    const maskedKey = CSE_API_KEY ? `${CSE_API_KEY.slice(0, 6)}...${CSE_API_KEY.slice(-4)}` : 'MISSING'
-    console.log(`[CSE DEBUG] Using CX: ${CSE_CX}, Key: ${maskedKey}`)
-
-    if (siteHost) {
-      params.set('siteSearch', siteHost)
-      params.set('siteSearchFilter', 'i')  // 'i' = include only this site
+    const body = {
+      api_key: TAVILY_API_KEY,
+      query: q,
+      max_results: 5,
+      search_depth: 'advanced'
     }
-    
-    const apiUrl = `https://www.googleapis.com/customsearch/v1?${params}`
-    const response = await fetch(apiUrl)
+    if (includeDomains && includeDomains.length > 0) {
+      body.include_domains = includeDomains
+    }
+
+    const response = await fetch('https://api.tavily.com/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    })
     const data = await response.json()
 
-    if (data.error) {
-      console.error('[CSE ERROR]', data.error)
-      return { error: `Google Search API error: ${data.error.message}`, status: data.error.status }
+    if (!response.ok) {
+      console.error('[Tavily ERROR]', data)
+      return { error: `Tavily API error: ${data.message || response.status}` }
     }
 
-    const results = (data.items || []).map(item => ({
+    const results = (data.results || []).map(item => ({
       title: item.title,
-      url: item.link,
-      snippet: item.snippet
+      url: item.url,
+      snippet: item.content
     }))
 
     if (results.length === 0) {
-      console.log(`[CSE] No results for query "${q}" on site "${siteHost || 'Entire Web'}"`)
+      console.log(`[Tavily] No results for "${q}" (domains: ${includeDomains?.join(', ') || 'all'})`)
     }
 
     return {
       results,
-      total: data.searchInformation?.totalResults ?? 0,
+      total: results.length,
       usageToday: monitor.count,
       nearDailyLimit: monitor.nearLimit
     }
   } catch (e) {
-    console.error('[CSE FETCH ERROR]', e)
-    return { error: `Network error reaching search API: ${e.message}` }
+    console.error('[Tavily FETCH ERROR]', e)
+    return { error: `Network error reaching Tavily: ${e.message}` }
   }
 }
 
 async function searchGroningerarchieven({ q }) {
-  return searchSite(q, 'groningerarchieven.nl')
+  return searchSite(q, ['groningerarchieven.nl'])
 }
 
-async function searchDelpher({ q }) {
-  return searchSite(q, 'delpher.nl')
+async function searchPoparchiefGroningen({ q }) {
+  return searchSite(q, ['poparchiefgroningen.nl'])
+}
+
+async function searchFilmbankGroningen({ q }) {
+  return searchSite(q, ['filmbankgroningen.nl'])
+}
+
+async function searchGroningerkentekens({ q }) {
+  return searchSite(q, ['groningerkentekens.nl'])
+}
+
+function applyFuzzy(q) {
+  if (!q) return q
+  // Split by space, add ~ to each word if not already present and not a wildcard
+  return q.split(/\s+/)
+    .map(word => {
+      if (word.length < 3) return word // too short for fuzzy
+      if (word.includes('*') || word.includes('?') || word.includes('~')) return word
+      return `${word}~`
+    })
+    .join(' ')
 }
 
 async function searchOpenArch({ q, fuzzy }) {
@@ -268,7 +247,7 @@ async function searchOpenArch({ q, fuzzy }) {
     const url = `https://api.openarch.nl/1.0/search.json?${params}`
     const response = await fetch(url)
     const data = await response.json()
-    
+
     const records = (data.result || []).map(item => ({
       source: 'OpenArch',
       title: `${item.voornaam || ''} ${item.tussenvoegsel || ''} ${item.achternaam || ''}`.trim() || q,
@@ -278,40 +257,12 @@ async function searchOpenArch({ q, fuzzy }) {
       url: `https://www.openarch.nl/show.php?archive=${item.archive}&identifier=${item.identifier}`,
       description: `${item.rol}: ${item.voornaam} ${item.achternaam}`
     }))
-    
+
     return { records, total: data.number_of_results }
   } catch (e) {
     console.error('[OpenArch API ERROR]', e)
     return { error: `OpenArch API error: ${e.message}` }
   }
-}
-
-async function searchArchievenNL({ q }) {
-  return searchSite(q, 'archieven.nl')
-}
-
-async function searchPoparchiefGroningen({ q }) {
-  return searchSite(q, 'poparchiefgroningen.nl')
-}
-
-async function searchFilmbankGroningen({ q }) {
-  return searchSite(q, 'filmbankgroningen.nl')
-}
-
-async function googleSearch({ q }) {
-  return searchSite(q)
-}
-
-function applyFuzzy(q) {
-  if (!q) return q
-  // Split by space, add ~ to each word if not already present and not a wildcard
-  return q.split(/\s+/)
-    .map(word => {
-      if (word.length < 3) return word // too short for fuzzy
-      if (word.includes('*') || word.includes('?') || word.includes('~')) return word
-      return `${word}~`
-    })
-    .join(' ')
 }
 
 async function searchAlleGroningers({ q, fuzzy, deed_type, gemeente, rows = 5, start = 0 }) {
@@ -397,22 +348,15 @@ async function searchBeeldbank({ q, rows = 5, start = 0, from_date, to_date }) {
   }
 }
 
-async function searchInventories({ q }) {
-  return searchSite(q, 'groningerarchieven.nl')
-}
-
 export async function executeTool(name, args) {
   switch (name) {
     case 'searchGroningerarchieven': return searchGroningerarchieven(args)
     case 'searchPoparchiefGroningen': return searchPoparchiefGroningen(args)
     case 'searchFilmbankGroningen': return searchFilmbankGroningen(args)
+    case 'searchGroningerkentekens': return searchGroningerkentekens(args)
     case 'searchAlleGroningers': return searchAlleGroningers(args)
     case 'searchBeeldbank': return searchBeeldbank(args)
-    case 'searchInventories': return searchInventories(args)
-    case 'searchDelpher': return searchDelpher(args)
     case 'searchOpenArch': return searchOpenArch(args)
-    case 'searchArchievenNL': return searchArchievenNL(args)
-    case 'googleSearch': return googleSearch(args)
     default: return { error: `Unknown tool: ${name}` }
   }
 }

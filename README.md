@@ -13,9 +13,10 @@ Users ask questions in Dutch or English. Archie uses Gemini to understand the qu
 **Supported sources:**
 - **AlleGroningers** — genealogical records (birth, marriage, death, baptism, burial)
 - **Beeldbank Groningen** — historical images, photographs, maps, portraits
-- **Groninger Archieven website** — opening hours, contact, events, policies, collection overviews, archive inventories (via Google Custom Search)
-- **Poparchief Groningen** — pop music, concerts, bands, cultural events (via Google Custom Search)
-- **Filmbank Groningen** — films, video, cinema collections (via Google Custom Search)
+- **Groninger Archieven website** — opening hours, contact, events, policies, collection overviews, archive inventories (via Tavily)
+- **Poparchief Groningen** — pop music, concerts, bands, cultural events (via Tavily)
+- **Filmbank Groningen** — films, video, cinema collections (via Tavily)
+- **Groninger Kentekens** — historical vehicle licence plates from Groningen (via Tavily)
 - **RAG knowledge base** — research guides and uploaded documents (internal vector store)
 
 ---
@@ -110,12 +111,12 @@ Admin uploads file
 |------|-----|---------|
 | `searchAlleGroningers(q, deed_type?, gemeente?, rows?, start?)` | Memorix genealogy API | Name, deed type, date, municipality, register, Handle URL |
 | `searchBeeldbank(q, rows?, start?, from_date?, to_date?)` | Memorix media bank API | Images with thumbnails, creator, date, Handle URL |
-| `searchGroningerarchieven(q)` | Google Custom Search (`groningerarchieven.nl`) | Page title, URL, snippet |
-| `searchInventories(q)` | Google Custom Search (`groningerarchieven.nl`) | Archive inventory pages, collection descriptions |
-| `searchPoparchiefGroningen(q)` | Google Custom Search (`poparchiefgroningen.nl`) | Pop music, concerts, bands, cultural events |
-| `searchFilmbankGroningen(q)` | Google Custom Search (`filmbankgroningen.nl`) | Films, video collections, cinema |
+| `searchGroningerarchieven(q)` | Tavily (`groningerarchieven.nl`) | Page title, URL, snippet |
+| `searchPoparchiefGroningen(q)` | Tavily (`poparchiefgroningen.nl`) | Pop music, concerts, bands, cultural events |
+| `searchFilmbankGroningen(q)` | Tavily (`filmbankgroningen.nl`) | Films, video collections, cinema |
+| `searchGroningerkentekens(q)` | Tavily (`groningerkentekens.nl`) | Historical vehicle licence plates |
 
-All CSE-backed tools share a 100 req/day free quota. Usage is tracked in SQLite (`cse_usage` table); the server logs a warning at 80 and 95 requests and includes a `cseWarning` flag in the chat API response.
+Tavily-backed tools share usage tracking in SQLite (`tavily_usage` table); the server logs a warning at 150 and 190 requests/day and includes a `cseWarning` flag in the chat API response.
 
 ---
 
@@ -217,8 +218,7 @@ fly deploy
 ```bash
 fly secrets set GEMINI_API_KEY=...
 fly secrets set ARCHIE_ADMIN_PASSWORD=...
-fly secrets set GOOGLE_CSE_KEY=...
-fly secrets set GOOGLE_CSE_CX=...
+fly secrets set TAVILY_API_KEY=...
 ```
 
 ### fly.toml highlights
@@ -236,8 +236,7 @@ fly secrets set GOOGLE_CSE_CX=...
 |----------|----------|-------------|
 | `GEMINI_API_KEY` | Yes | Google Generative AI API key |
 | `ARCHIE_ADMIN_PASSWORD` | Yes | Password for `/archie/admin` |
-| `GOOGLE_CSE_KEY` | Yes | Google Custom Search API key (100 req/day free) |
-| `GOOGLE_CSE_CX` | Yes | Programmable Search Engine ID (`cx`) |
+| `TAVILY_API_KEY` | Yes | Tavily search API key |
 | `NODE_ENV` | No | Set to `production` in prod |
 | `DATA_DIR` | No | Override data directory (default: `/data` in prod, `./server/database` in dev) |
 

@@ -32,7 +32,7 @@ Archie is an AI-powered archival assistant for the Groninger Archieven. It provi
 ### Prerequisites
 *   Node.js 20+
 *   Google Gemini API Key
-*   Google Custom Search Key/CX (for external web search tools)
+*   Tavily API key (for external web search tools)
 
 ### Setup
 1.  Install dependencies: `npm install`
@@ -40,8 +40,7 @@ Archie is an AI-powered archival assistant for the Groninger Archieven. It provi
     ```env
     GEMINI_API_KEY=your_key
     ARCHIE_ADMIN_PASSWORD=your_admin_password
-    GOOGLE_CSE_KEY=your_cse_key
-    GOOGLE_CSE_CX=your_cse_cx
+    TAVILY_API_KEY=your_tavily_key
     NODE_ENV=development
     ```
 3.  Seed the initial knowledge base: `node server/scripts/scrapeGA.js`

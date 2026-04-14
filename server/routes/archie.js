@@ -19,16 +19,12 @@ Think step by step. When results are sparse, try alternative spellings or broade
 Always share direct URLs to records when available. When a record has a Handle persistent identifier (hdl.handle.net), prefer that over other URLs — Handle links are permanent and citable.
 Respond in the same language the user uses.
 
-When using web search tools (searchGroningerarchieven, searchInventories, searchPoparchiefGroningen, searchFilmbankGroningen, searchDelpher, searchArchievenNL, googleSearch):
-- Only use results from the tool's specific domain (except for googleSearch). Ignore results from any other domain.
-- searchGroningerarchieven is for any information on groningerarchieven.nl (collections, people, help, info).
-- searchInventories is specifically for searching archive inventories and finding aids (inventarissen) on groningerarchieven.nl.
-- searchDelpher is for historical newspapers, books, and magazines (delpher.nl). Use this to find mentions of people or events in contemporary sources.
+Web search tools are powered by Tavily and are strictly limited to the following domains: groningerarchieven.nl, poparchiefgroningen.nl, filmbankgroningen.nl, groningerkentekens.nl. Do not claim to have searched or found information from any other website.
+- searchGroningerarchieven searches groningerarchieven.nl for archive collections, historical persons, locations, events, opening hours, and visitor information.
+- searchPoparchiefGroningen searches poparchiefgroningen.nl for pop music, bands, venues, and cultural events in Groningen.
+- searchFilmbankGroningen searches filmbankgroningen.nl for films, videos, cinema, and moving image collections related to Groningen.
+- searchGroningerkentekens searches groningerkentekens.nl for historical vehicle licence plates (kentekens) from the province of Groningen.
 - searchOpenArch is for genealogical data across the Netherlands.
-- searchArchievenNL is for finding archive collections across the Netherlands.
-- searchPoparchiefGroningen is for pop music, bands, and cultural events in Groningen.
-- searchFilmbankGroningen is for films and moving images.
-- googleSearch is for general web search. Use this to identify unknown people, find historical context, or locate information on other archive/history websites when specialized tools yield nothing.
 - For genealogical searches (AlleGroningers, OpenArch), if an exact name search yields no results, try setting fuzzy: true or use wildcards yourself (e.g. "Pieters*" or "Vri?s").
 - If a specific name search (e.g. "Full Name") yields no results, try broader variations (e.g. "Last Name") or split the name into separate keywords.
 - If no results answer the question, say clearly you could not find that information. Do NOT fall back on general knowledge or other sources.
@@ -149,17 +145,14 @@ router.post('/chat', async (req, res) => {
       }
     }
 
-    // Surface CSE quota warning if any CSE-backed tool call was near the daily limit
-    const CSE_TOOLS = new Set([
-      'searchGroningerarchieven', 
-      'searchInventories', 
-      'searchPoparchiefGroningen', 
-      'searchFilmbankGroningen', 
-      'searchDelpher', 
-      'searchArchievenNL', 
-      'googleSearch'
+    // Surface Tavily quota warning if any Tavily-backed tool call was near the daily limit
+    const TAVILY_TOOLS = new Set([
+      'searchGroningerarchieven',
+      'searchPoparchiefGroningen',
+      'searchFilmbankGroningen',
+      'searchGroningerkentekens'
     ])
-    const cseWarning = toolCalls.some(t => CSE_TOOLS.has(t.name) && t.result?.nearDailyLimit)
+    const cseWarning = toolCalls.some(t => TAVILY_TOOLS.has(t.name) && t.result?.nearDailyLimit)
 
     // Persist updated history
     const updatedHistory = await chat.getHistory()
