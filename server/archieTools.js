@@ -123,6 +123,20 @@ export const toolDeclarations = [
       },
       required: ['q']
     }
+  },
+  {
+    name: 'googleSearch',
+    description: 'Perform a general web search for information NOT found in the specialized archival tools. Use this sparingly for general historical context or identifying entities that might be found in the archives later.',
+    parameters: {
+      type: 'object',
+      properties: {
+        q: {
+          type: 'string',
+          description: 'Search query.'
+        }
+      },
+      required: ['q']
+    }
   }
 ]
 
@@ -142,10 +156,12 @@ async function searchSite(q, siteHost) {
       key: CSE_API_KEY,
       cx: CSE_CX,
       q,
-      num: 5,
-      siteSearch: siteHost,
-      siteSearchFilter: 'i'  // 'i' = include only this site
+      num: 5
     })
+    if (siteHost) {
+      params.set('siteSearch', siteHost)
+      params.set('siteSearchFilter', 'i')  // 'i' = include only this site
+    }
     const response = await fetch(`https://www.googleapis.com/customsearch/v1?${params}`)
     const data = await response.json()
 
@@ -180,6 +196,10 @@ async function searchPoparchiefGroningen({ q }) {
 
 async function searchFilmbankGroningen({ q }) {
   return searchSite(q, 'filmbankgroningen.nl')
+}
+
+async function googleSearch({ q }) {
+  return searchSite(q)
 }
 
 async function searchAlleGroningers({ q, deed_type, gemeente, rows = 5, start = 0 }) {
@@ -276,6 +296,7 @@ export async function executeTool(name, args) {
     case 'searchAlleGroningers': return searchAlleGroningers(args)
     case 'searchBeeldbank': return searchBeeldbank(args)
     case 'searchInventories': return searchInventories(args)
+    case 'googleSearch': return googleSearch(args)
     default: return { error: `Unknown tool: ${name}` }
   }
 }
