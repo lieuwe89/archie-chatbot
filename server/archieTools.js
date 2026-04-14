@@ -204,11 +204,14 @@ async function searchSite(q, siteHost) {
       params.set('siteSearch', siteHost)
       params.set('siteSearchFilter', 'i')  // 'i' = include only this site
     }
-    const response = await fetch(`https://www.googleapis.com/customsearch/v1?${params}`)
+    
+    const apiUrl = `https://www.googleapis.com/customsearch/v1?${params}`
+    const response = await fetch(apiUrl)
     const data = await response.json()
 
     if (data.error) {
-      return { error: `CSE API error: ${data.error.message}` }
+      console.error('[CSE ERROR]', data.error)
+      return { error: `Google Search API error: ${data.error.message}`, status: data.error.status }
     }
 
     const results = (data.items || []).map(item => ({
@@ -217,6 +220,10 @@ async function searchSite(q, siteHost) {
       snippet: item.snippet
     }))
 
+    if (results.length === 0) {
+      console.log(`[CSE] No results for query "${q}" on site "${siteHost || 'Entire Web'}"`)
+    }
+
     return {
       results,
       total: data.searchInformation?.totalResults ?? 0,
@@ -224,7 +231,8 @@ async function searchSite(q, siteHost) {
       nearDailyLimit: monitor.nearLimit
     }
   } catch (e) {
-    return { error: e.message }
+    console.error('[CSE FETCH ERROR]', e)
+    return { error: `Network error reaching search API: ${e.message}` }
   }
 }
 
