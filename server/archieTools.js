@@ -10,13 +10,13 @@ const CSE_CX = process.env.GOOGLE_CSE_CX
 export const toolDeclarations = [
   {
     name: 'searchGroningerarchieven',
-    description: 'Search www.groningerarchieven.nl for institutional information: opening hours, contact details, visitor info, collections overview, events, policies, reading room rules, and general archive information. Use this tool for questions about the Groninger Archieven as an institution. Do NOT use this for genealogical person records or historical images — use searchAlleGroningers and searchBeeldbank for those. Do NOT use this for research guides (onderzoeksgidsen) — those are available in the internal knowledge base, use that instead.',
+    description: 'Search groningerarchieven.nl for information about archive collections, historical persons, locations, events, or institutional information (opening hours, visitor info). Use this whenever you are looking for general historical information related to the Groninger Archieven.',
     parameters: {
       type: 'object',
       properties: {
         q: {
           type: 'string',
-          description: 'Search query, e.g. "openingstijden" or "aanvragen archiefstukken".'
+          description: 'Search query.'
         }
       },
       required: ['q']
