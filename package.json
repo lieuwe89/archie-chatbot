@@ -1,6 +1,6 @@
 {
   "name": "archie-chatbot",
-  "version": "1.8.4",
+  "version": "1.8.5",
   "description": "AI chatbot for the Groninger Archieven",
   "type": "module",
   "main": "server/index.js",
@@ -13,13 +13,13 @@
     "start": "npm run build && npm run server"
   },
   "keywords": [
-    "gemini",
-    "ai",
-    "code",
-    "ui",
-    "assistant"
+    "archie",
+    "groninger-archieven",
+    "rag",
+    "chatbot",
+    "gemini"
   ],
-  "author": "Gemini CLI UI Contributors",
+  "author": "Lieuwe Jongsma",
   "license": "MIT",
   "dependencies": {
     "@codemirror/lang-css": "^6.3.1",
