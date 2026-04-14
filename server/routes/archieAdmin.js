@@ -171,53 +171,52 @@ router.get('/documents', requireAdmin, async (req, res) => {
   res.send(dashboardPage(docs, [...indexingFiles]))
 })
 
-// POST /documents — upload, extract text, chunk, then embed in background
+// POST /documents — upload, then extract/chunk/embed entirely in background
 router.post('/documents', requireAdmin, (req, res, next) => {
   upload.single('file')(req, res, (err) => {
     if (err) return res.status(400).send(escapeHtml(err.message))
     next()
   })
-}, async (req, res) => {
+}, (req, res) => {
   if (!req.file) return res.status(400).send('No file uploaded.')
 
   const filename = req.file.originalname
+  const buffer = req.file.buffer
 
-  try {
-    let text
-    if (filename.endsWith('.pdf')) {
-      text = await extractPdfText(req.file.buffer)
-    } else {
-      text = req.file.buffer.toString('utf8')
+  // Respond immediately — all processing happens in background
+  indexingFiles.add(filename)
+  res.redirect('/archie/admin/documents')
+
+  // Extract, chunk, and embed in background (PDF parsing can be slow)
+  ;(async () => {
+    try {
+      let text
+      if (filename.endsWith('.pdf')) {
+        text = await extractPdfText(buffer)
+      } else {
+        text = buffer.toString('utf8')
+      }
+
+      if (!text.trim()) {
+        console.error(`Admin upload: "${filename}" appears to be empty or unreadable.`)
+        return
+      }
+
+      const textChunks = chunkText(text)
+      const chunks = textChunks.map((chunk, i) => ({
+        id: `${filename}-${i}-${crypto.randomUUID()}`,
+        source: filename,
+        title: filename,
+        chunk_text: chunk
+      }))
+
+      await addChunks(chunks)
+    } catch (err) {
+      console.error('Background indexing error:', err)
+    } finally {
+      indexingFiles.delete(filename)
     }
-
-    if (!text.trim()) {
-      return res.status(400).send(`File "${escapeHtml(filename)}" appears to be empty or unreadable.`)
-    }
-
-    const textChunks = chunkText(text)
-    const chunks = textChunks.map((chunk, i) => ({
-      id: `${filename}-${i}-${crypto.randomUUID()}`,
-      source: filename,
-      title: filename,
-      chunk_text: chunk
-    }))
-
-    // Mark as indexing and respond immediately — don't block on embedding
-    indexingFiles.add(filename)
-    res.redirect('/archie/admin/documents')
-
-    // Embed and store in background
-    addChunks(chunks)
-      .then(() => { indexingFiles.delete(filename) })
-      .catch(err => {
-        console.error('Background indexing error:', err)
-        indexingFiles.delete(filename)
-      })
-
-  } catch (err) {
-    console.error('Admin upload error:', err)
-    res.status(500).send(`Upload failed: ${escapeHtml(err.message)}`)
-  }
+  })()
 })
 
 // POST /documents/:source/delete
