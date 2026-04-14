@@ -159,7 +159,8 @@ const ArchieInterface = () => {
 }
 
 const ToolCallList = ({ toolCalls }) => {
-  const [expanded, setExpanded] = useState(false)
+  const hasImages = toolCalls.some(tc => tc.result?.records?.some(r => r.thumbnail))
+  const [expanded, setExpanded] = useState(hasImages)
 
   const labelFor = (name) => ({
     searchAlleGroningers: 'Searched AlleGroningers',
