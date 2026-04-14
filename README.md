@@ -8,12 +8,15 @@ Archie is an AI-powered archival assistant for the [Groninger Archieven](https:/
 
 ## What it does
 
-Users ask questions in Dutch or English. Archie uses Gemini to understand the question, calls the relevant archive APIs as tools, and synthesises results into a readable answer. It can run multiple searches in a single response (agentic loop).
+Users ask questions in Dutch or English. Archie uses Gemini to understand the question, calls the relevant archive APIs and search tools as tools, and synthesises results into a readable answer. It can run multiple searches in a single response (agentic loop). The model automatically decides which tool(s) to use based on the question.
 
 **Supported sources:**
 - **AlleGroningers** — genealogical records (birth, marriage, death, baptism, burial)
 - **Beeldbank Groningen** — historical images, photographs, maps, portraits
-- **Inventories** — archive finding aids (in development)
+- **Groninger Archieven website** — opening hours, contact, events, policies, collection overviews, archive inventories (via Google Custom Search)
+- **Poparchief Groningen** — pop music, concerts, bands, cultural events (via Google Custom Search)
+- **Filmbank Groningen** — films, video, cinema collections (via Google Custom Search)
+- **RAG knowledge base** — research guides and uploaded documents (internal vector store)
 
 ---
 
@@ -107,7 +110,12 @@ Admin uploads file
 |------|-----|---------|
 | `searchAlleGroningers(q, deed_type?, gemeente?, rows?, start?)` | Memorix genealogy API | Name, deed type, date, municipality, register, Handle URL |
 | `searchBeeldbank(q, rows?, start?, from_date?, to_date?)` | Memorix media bank API | Images with thumbnails, creator, date, Handle URL |
-| `searchInventories(q)` | — | Placeholder, returns empty |
+| `searchGroningerarchieven(q)` | Google Custom Search (`groningerarchieven.nl`) | Page title, URL, snippet |
+| `searchInventories(q)` | Google Custom Search (`groningerarchieven.nl`) | Archive inventory pages, collection descriptions |
+| `searchPoparchiefGroningen(q)` | Google Custom Search (`poparchiefgroningen.nl`) | Pop music, concerts, bands, cultural events |
+| `searchFilmbankGroningen(q)` | Google Custom Search (`filmbankgroningen.nl`) | Films, video collections, cinema |
+
+All CSE-backed tools share a 100 req/day free quota. Usage is tracked in SQLite (`cse_usage` table); the server logs a warning at 80 and 95 requests and includes a `cseWarning` flag in the chat API response.
 
 ---
 
@@ -209,6 +217,8 @@ fly deploy
 ```bash
 fly secrets set GEMINI_API_KEY=...
 fly secrets set ARCHIE_ADMIN_PASSWORD=...
+fly secrets set GOOGLE_CSE_KEY=...
+fly secrets set GOOGLE_CSE_CX=...
 ```
 
 ### fly.toml highlights
@@ -226,6 +236,8 @@ fly secrets set ARCHIE_ADMIN_PASSWORD=...
 |----------|----------|-------------|
 | `GEMINI_API_KEY` | Yes | Google Generative AI API key |
 | `ARCHIE_ADMIN_PASSWORD` | Yes | Password for `/archie/admin` |
+| `GOOGLE_CSE_KEY` | Yes | Google Custom Search API key (100 req/day free) |
+| `GOOGLE_CSE_CX` | Yes | Programmable Search Engine ID (`cx`) |
 | `NODE_ENV` | No | Set to `production` in prod |
 | `DATA_DIR` | No | Override data directory (default: `/data` in prod, `./server/database` in dev) |
 

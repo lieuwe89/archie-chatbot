@@ -84,13 +84,41 @@ export const toolDeclarations = [
   },
   {
     name: 'searchInventories',
-    description: 'Search archive inventories and finding aids. Currently returns no results — this source is under development.',
+    description: 'Search archive inventories and finding aids on www.groningerarchieven.nl. Use for questions about specific archive collections, inventory numbers, collection descriptions, and finding aids.',
     parameters: {
       type: 'object',
       properties: {
         q: {
           type: 'string',
-          description: 'Keyword search query.'
+          description: 'Keyword search query, e.g. "inventarisnummer" or collection name.'
+        }
+      },
+      required: ['q']
+    }
+  },
+  {
+    name: 'searchPoparchiefGroningen',
+    description: 'Search poparchiefgroningen.nl for information about pop music, pop culture, concerts, bands, venues, and current cultural events in Groningen. Use this tool whenever the question is about pop music, pop culture, or contemporary cultural life in Groningen.',
+    parameters: {
+      type: 'object',
+      properties: {
+        q: {
+          type: 'string',
+          description: 'Search query, e.g. a band name, venue, or event.'
+        }
+      },
+      required: ['q']
+    }
+  },
+  {
+    name: 'searchFilmbankGroningen',
+    description: 'Search filmbankgroningen.nl for information about films, videos, cinema, and moving image collections related to Groningen. Use this tool whenever the words "film", "video", "cinema", or "documentaire" appear in the question.',
+    parameters: {
+      type: 'object',
+      properties: {
+        q: {
+          type: 'string',
+          description: 'Search query, e.g. a film title, director, or subject.'
         }
       },
       required: ['q']
@@ -98,7 +126,8 @@ export const toolDeclarations = [
   }
 ]
 
-async function searchGroningerarchieven({ q }) {
+// Shared helper: search a specific site via Google Custom Search API
+async function searchSite(q, siteHost) {
   if (!CSE_API_KEY || !CSE_CX) {
     return { error: 'Google Custom Search not configured (GOOGLE_CSE_KEY / GOOGLE_CSE_CX missing).' }
   }
@@ -109,7 +138,14 @@ async function searchGroningerarchieven({ q }) {
   }
 
   try {
-    const params = new URLSearchParams({ key: CSE_API_KEY, cx: CSE_CX, q, num: 5 })
+    const params = new URLSearchParams({
+      key: CSE_API_KEY,
+      cx: CSE_CX,
+      q,
+      num: 5,
+      siteSearch: siteHost,
+      siteSearchFilter: 'i'  // 'i' = include only this site
+    })
     const response = await fetch(`https://www.googleapis.com/customsearch/v1?${params}`)
     const data = await response.json()
 
@@ -132,6 +168,18 @@ async function searchGroningerarchieven({ q }) {
   } catch (e) {
     return { error: e.message }
   }
+}
+
+async function searchGroningerarchieven({ q }) {
+  return searchSite(q, 'www.groningerarchieven.nl')
+}
+
+async function searchPoparchiefGroningen({ q }) {
+  return searchSite(q, 'poparchiefgroningen.nl')
+}
+
+async function searchFilmbankGroningen({ q }) {
+  return searchSite(q, 'filmbankgroningen.nl')
 }
 
 async function searchAlleGroningers({ q, deed_type, gemeente, rows = 5, start = 0 }) {
@@ -216,13 +264,15 @@ async function searchBeeldbank({ q, rows = 5, start = 0, from_date, to_date }) {
   }
 }
 
-function searchInventories() {
-  return { records: [], total: 0 }
+async function searchInventories({ q }) {
+  return searchSite(q, 'www.groningerarchieven.nl')
 }
 
 export async function executeTool(name, args) {
   switch (name) {
     case 'searchGroningerarchieven': return searchGroningerarchieven(args)
+    case 'searchPoparchiefGroningen': return searchPoparchiefGroningen(args)
+    case 'searchFilmbankGroningen': return searchFilmbankGroningen(args)
     case 'searchAlleGroningers': return searchAlleGroningers(args)
     case 'searchBeeldbank': return searchBeeldbank(args)
     case 'searchInventories': return searchInventories(args)
