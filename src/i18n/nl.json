@@ -1,0 +1,78 @@
+{
+  "archie": {
+    "title": "Archie",
+    "subtitle": "Groninger Archief Assistent",
+    "welcome": "Hallo! Ik ben Archie, uw archiefassistent. Ik kan u helpen mensen te vinden in AlleGroningers, afbeeldingen in de Beeldbank (foto's, kaarten, tekeningen en prenten), of historische collecties in het Groninger Archief. Wat zoekt u vandaag?",
+    "searchingVaults": "Archie doorzoekt de archieven…",
+    "placeholder": "Stel een vraag over een persoon, plaats of historisch onderwerp…",
+    "tip": "Tip: Probeer 'Wat is de oudste doop in de Akerk?' of een familienaam.",
+    "noResponse": "Geen antwoord ontvangen.",
+    "errorMessage": "Het spijt me, er is een fout opgetreden. Probeer het later opnieuw.",
+    "searchesPerformed_one": "{{count}} zoekopdracht uitgevoerd",
+    "searchesPerformed_other": "{{count}} zoekopdrachten uitgevoerd",
+    "searchAlleGroningers": "AlleGroningers doorzocht",
+    "searchBeeldbank": "Beeldbank doorzocht",
+    "searchInventories": "Inventarissen doorzocht",
+    "calledTool": "{{name}} aangeroepen"
+  },
+  "login": {
+    "welcomeBack": "Welkom terug",
+    "subtitle": "Meld u aan bij uw account",
+    "username": "Gebruikersnaam",
+    "password": "Wachtwoord",
+    "usernamePlaceholder": "Voer uw gebruikersnaam in",
+    "passwordPlaceholder": "Voer uw wachtwoord in",
+    "signingIn": "Aanmelden…",
+    "signIn": "Aanmelden",
+    "credentials": "Voer uw inloggegevens in om toegang te krijgen",
+    "errorBoth": "Voer zowel gebruikersnaam als wachtwoord in"
+  },
+  "error": {
+    "title": "Oeps! Er is iets misgegaan",
+    "message": "Er is een onverwachte fout opgetreden. Vernieuw de pagina om het opnieuw te proberen.",
+    "refresh": "Pagina vernieuwen"
+  },
+  "version": {
+    "updateAvailable": "Update beschikbaar",
+    "newVersionReady": "Een nieuwe versie is gereed",
+    "currentVersion": "Huidige versie",
+    "latestVersion": "Nieuwste versie",
+    "howToUpgrade": "Hoe bij te werken:",
+    "upgradeNote": "Voer dit commando uit in uw projectmap om bij te werken naar de nieuwste versie.",
+    "later": "Later",
+    "copyCommand": "Commando kopiëren"
+  },
+  "tabs": {
+    "chat": "Chat",
+    "shell": "Terminal",
+    "files": "Bestanden",
+    "sourceControl": "Versiebeheer"
+  },
+  "main": {
+    "newSession": "Nieuwe sessie",
+    "projectFiles": "Projectbestanden",
+    "sourceControl": "Versiebeheer",
+    "loading": "Laden…",
+    "settingUpWorkspace": "Uw werkruimte wordt ingesteld…",
+    "chooseProject": "Kies uw project",
+    "chooseProjectDesc": "Selecteer een project uit de zijbalk om te beginnen. Elk project bevat uw chatsessies en bestandsgeschiedenis.",
+    "tipMobile": "Tik op de menuknop hierboven om projecten te openen",
+    "tipDesktop": "Maak een nieuw project aan via het mappictogram in de zijbalk"
+  },
+  "settings": {
+    "quickSettings": "Snelle instellingen",
+    "appearance": "Uiterlijk",
+    "darkMode": "Donkere modus",
+    "toolDisplay": "Weergave hulpmiddelen",
+    "autoExpandTools": "Hulpmiddelen automatisch uitklappen",
+    "showRawParameters": "Ruwe parameters weergeven",
+    "viewOptions": "Weergaveopties",
+    "autoScrollToBottom": "Automatisch naar beneden scrollen",
+    "closePanel": "Instellingenpaneel sluiten",
+    "openPanel": "Instellingenpaneel openen"
+  },
+  "language": {
+    "switchTo": "EN",
+    "current": "NL"
+  }
+}
