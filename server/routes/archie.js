@@ -80,7 +80,24 @@ router.post('/chat', async (req, res) => {
     const chat = model.startChat({ history: session.contents })
 
     // First turn: user message
-    let response = await chat.sendMessage(message)
+    let response;
+    try {
+      response = await chat.sendMessage(message)
+    } catch (e) {
+      console.error('[Archie] Error in initial sendMessage:', e)
+      return res.status(500).json({ error: 'Gemini direct error', details: e.message })
+    }
+
+    // Check if the prompt itself was blocked
+    if (response.response.promptFeedback?.blockReason) {
+      console.warn('[Archie] Prompt was blocked:', response.response.promptFeedback.blockReason)
+      return res.json({ 
+        reply: `Mijn excuses, maar ik kan deze vraag niet beantwoorden vanwege veiligheidsinstellingen (Reden: ${response.response.promptFeedback.blockReason}). Probeer uw vraag anders te formuleren.`, 
+        toolCalls: [], 
+        sessionId 
+      })
+    }
+
     const toolCalls = []
 
     // Agentic loop: keep executing tools until model stops calling them
