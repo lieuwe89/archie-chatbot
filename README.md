@@ -1,284 +1,236 @@
-# Archie - Groningen Archive Chatbot
+# Archie — Groninger Archieven Chatbot
 
-Archie is an intelligent assistant for the Groninger Archieven. It helps users search across multiple archival silos (AlleGroningers, Beeldbank, and Inventories) using natural language, synthesized by Gemini AI.
+Archie is an AI-powered archival assistant for the [Groninger Archieven](https://www.groningerarchieven.nl). It lets users search across genealogical records, historical images, and archive inventories using natural language.
 
-This project is based on the Gemini CLI UI and lives at `playground.lieuwejongsma.nl/archie`.
+**Live:** `playground.lieuwejongsma.nl/archie`
 
---- 
-<div align="center">
-  <img src="public/logo.svg" alt="Gemini CLI UI" width="64" height="64">
-  <h1>Gemini CLI UI</h1>
-</div>
+---
 
-A desktop and mobile UI for [Gemini CLI](https://github.com/google-gemini/gemini-cli), Google's official CLI for AI-assisted coding. You can use it locally or remotely to view your active projects and sessions in Gemini CLI and make changes to them the same way you would do it in Gemini CLI. This gives you a proper interface that works everywhere.
+## What it does
 
+Users ask questions in Dutch or English. Archie uses Gemini to understand the question, calls the relevant archive APIs as tools, and synthesises results into a readable answer. It can run multiple searches in a single response (agentic loop).
 
-## Screenshots
+**Supported sources:**
+- **AlleGroningers** — genealogical records (birth, marriage, death, baptism, burial)
+- **Beeldbank Groningen** — historical images, photographs, maps, portraits
+- **Inventories** — archive finding aids (in development)
 
-<div align="center">
-<table>
-<tr>
-<td align="center">
-<h3>Chat View</h3>
-<img src="public/screenshots/TOP.png" alt="Desktop Interface" width="400">
-<br>
-<em>Main interface showing project overview and chat</em>
-</td>
-<td align="center">
-<h3>Setting</h3>
-<img src="public/screenshots/Setting.png" alt="Mobile Interface" width="400">
-<br>
-<em>Setting</em>
-</td>
-</tr>
-</table>
-<table>
-<tr>
-<td align="center">
-<h3>Chat View</h3>
-<img src="public/screenshots/gemini-cli-ui-diagram-en.png" alt="Desktop Interface" width="800">
-<br>
-<em>Gemini CLI UI Diagram</em>
-</td>
-</table>
-</div align="center">
+---
 
-## Features
+## Stack
 
-- **Responsive Design** - Works seamlessly across desktop, tablet, and mobile so you can also use Gemini CLI from mobile
-- **Interactive Chat Interface** - Built-in chat interface for seamless communication with Gemini CLI
-- **Integrated Shell Terminal** - Direct access to Gemini CLI through built-in shell functionality
-- **File Explorer** - Interactive file tree with syntax highlighting and live editing
-- **Git Explorer** - View, stage and commit your changes. You can also switch branches
-- **Session Management** - Resume conversations, manage multiple sessions, and track history
-- **Model Selection** - Choose from multiple Gemini models including Gemini 2.5 Pro
-- **YOLO Mode** - Skip confirmation prompts for faster operations (use with caution)
+### Frontend
+| Library | Version | Role |
+|---------|---------|------|
+| React | 18 | Component framework |
+| Vite | 7 | Build tool & dev server |
+| Tailwind CSS | 3.4 | Styling |
+| react-markdown + remark-gfm | — | Markdown rendering |
+| react-dropzone | 14 | File upload UI |
+| Lucide React | — | Icons |
+| xterm.js + WebGL addon | 5.3 | Embedded terminal (main app) |
+| CodeMirror 6 | — | File editor (main app) |
 
-## Quick Start
+### Backend
+| Library | Version | Role |
+|---------|---------|------|
+| Express | 4.18 | HTTP server (port 4008) |
+| ws | 8.14 | WebSocket server |
+| better-sqlite3 | 12 | Auth database (SQLite) |
+| bcrypt | 6 | Password hashing |
+| jsonwebtoken | 9 | JWT auth tokens |
+| express-session | 1.19 | Admin panel sessions |
+| multer | 2 | File upload handling |
+| pdf-parse | 2.4 | PDF text extraction |
 
-### Prerequisites
+### AI & RAG
+| Component | Detail |
+|-----------|--------|
+| Chat model | Google Gemini 2.5 Flash |
+| Embedding model | Google Gemini `embedding-001` (3072 dimensions) |
+| Vector store | LanceDB 0.27 (serverless, file-based) |
+| API client | `@google/generative-ai` 0.21 |
+| Function calling | Gemini native tool use (agentic loop) |
 
-- [Node.js](https://nodejs.org/) v20 or higher
-- [Gemini CLI](https://github.com/google-gemini/gemini-cli) installed and configured
+### Deployment
+| Component | Detail |
+|-----------|--------|
+| Platform | Fly.io (region: `ams`) |
+| Container | Docker, Node.js 20 bookworm-slim |
+| Persistent storage | Fly.io volume `archie_data` → `/data` |
+| VM | 512 MB RAM, 1 shared CPU, scale-to-zero |
 
-### Installation
-
-1. **Clone the repository:**
-```bash
-git clone https://github.com/cruzyjapan/Gemini-CLI-UI.git
-cd Gemini-CLI-UI
-```
-
-2. **Install dependencies:**
-```bash
-npm install
-```
-
-3. **Configure environment:**
-```bash
-cp .env.example .env
-# Edit .env with your preferred settings
-```
-
-**Note**: The `.env` file has been removed for security. Always copy `.env.example` to `.env` when using and modify settings as needed.
-
-4. **Start the application:**
-```bash
-# Development mode (with hot reload)
-npm run dev
-```
-The application will start at the port you specified in your .env
-
-5. **Open your browser:**
-   - Development: `http://localhost:4009`
-
-## Security & Tools Configuration
-
-**🔒 Important Notice**: All Gemini CLI tools are **disabled by default**. This prevents potentially harmful operations from running automatically.
-
-### Enabling Tools
-
-To use Gemini CLI's full functionality, you'll need to manually enable tools:
-
-1. **Open Tools Settings** - Click the gear icon in the sidebar
-2. **Enable Selectively** - Turn on only the tools you need
-3. **Apply Settings** - Your preferences are saved locally
-
-### About YOLO Mode
-
-YOLO mode ("You Only Live Once") is equivalent to Gemini CLI's `--yolo` flag, skipping all confirmation prompts. This mode speeds up your work but should be used with caution.
-
-**Recommended approach**: Start with basic tools enabled and add more as needed. You can always adjust these settings later.
-
-## Usage Guide
-
-### Core Features
-
-#### Project Management
-The UI automatically discovers Gemini CLI projects from `~/.gemini/projects/` and provides:
-- **Visual Project Browser** - All available projects with metadata and session counts
-- **Project Actions** - Rename, delete, and organize projects
-- **Smart Navigation** - Quick access to recent projects and sessions
-
-#### Chat Interface
-- **Use responsive chat or Gemini CLI** - You can either use the adapted chat interface or use the shell button to connect to Gemini CLI
-- **Real-time Communication** - Stream responses from Gemini with WebSocket connection
-- **Session Management** - Resume previous conversations or start fresh sessions
-- **Message History** - Complete conversation history with timestamps and metadata
-- **Multi-format Support** - Text, code blocks, and file references
-- **Image Upload** - Upload and ask questions about images in chat
-
-#### File Explorer & Editor
-- **Interactive File Tree** - Browse project structure with expand/collapse navigation
-- **Live File Editing** - Read, modify, and save files directly in the interface
-- **Syntax Highlighting** - Support for multiple programming languages
-- **File Operations** - Create, rename, delete files and directories
-
-#### Git Explorer
-- **Visualize Changes** - See current changes in real-time
-- **Stage and Commit** - Create Git commits directly from the UI
-- **Branch Management** - Switch and manage branches
-
-#### Session Management
-- **Session Persistence** - All conversations automatically saved
-- **Session Organization** - Group sessions by project and timestamp
-- **Session Actions** - Rename, delete, and export conversation history
-- **Cross-device Sync** - Access sessions from any device
-
-### Mobile App
-- **Responsive Design** - Optimized for all screen sizes
-- **Touch-friendly Interface** - Swipe gestures and touch navigation
-- **Mobile Navigation** - Bottom tab bar for easy thumb navigation
-- **Adaptive Layout** - Collapsible sidebar and smart content prioritization
-- **Add to Home Screen** - Add a shortcut to your home screen and the app will behave like a PWA
+---
 
 ## Architecture
 
-### System Overview
+```
+Browser
+  └── ArchieInterface.jsx (React)
+        │  POST /archie/api/archie/chat
+        ▼
+  server/routes/archie.js
+        │  1. Embed user query (Gemini embedding-001)
+        │  2. Semantic search → top 5 chunks from LanceDB
+        │  3. Build system prompt (base instructions + RAG context)
+        │  4. Start Gemini chat session
+        │
+        ├─ Agentic loop ──────────────────────────────────────────────┐
+        │    model returns function calls?                             │
+        │    yes → execute tools in parallel → send results back ─────┘
+        │    no  → return final text reply
+        │
+        └── { reply, toolCalls, sessionId } → browser
+```
+
+### RAG pipeline
 
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Frontend      │    │   Backend       │    │  Gemini CLI     │
-│   (React/Vite)  │◄──►│ (Express/WS)    │◄──►│  Integration    │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
+Admin uploads file
+  └── Browser chunks file into 256 KB pieces → POST /upload-chunk (each)
+        │
+        └── Server reassembles chunks
+              │
+              ├── PDF? → pdf-parse extracts text
+              │
+              └── Chunk text into ~2000-char segments (paragraph-aware)
+                    │
+                    └── Batch embed (up to 50 chunks/call) via Gemini
+                          │
+                          └── Insert into LanceDB `documents` table
+                                { id, source, title, chunk_text, vector[3072] }
 ```
 
-### Backend (Node.js + Express)
-- **Express Server** - RESTful API with static file serving (Port: 4008)
-- **WebSocket Server** - Communication for chats and project refresh
-- **Gemini CLI Integration** - Process spawning and management
-- **Session Management** - JSONL parsing and conversation persistence
-- **File System API** - Exposing file browser for projects
-- **Authentication System** - Secure login and session management (SQLite database: geminicliui_auth.db)
+### Tool declarations (function calling)
 
-### Frontend (React + Vite)
-- **React 18** - Modern component architecture with hooks
-- **CodeMirror** - Advanced code editor with syntax highlighting
-- **Tailwind CSS** - Utility-first CSS framework
-- **Responsive Design** - Mobile-first approach
+| Tool | API | Returns |
+|------|-----|---------|
+| `searchAlleGroningers(q, deed_type?, gemeente?, rows?, start?)` | Memorix genealogy API | Name, deed type, date, municipality, register, Handle URL |
+| `searchBeeldbank(q, rows?, start?, from_date?, to_date?)` | Memorix media bank API | Images with thumbnails, creator, date, Handle URL |
+| `searchInventories(q)` | — | Placeholder, returns empty |
 
-## Configuration Details
+---
 
-### Port Settings
-- **API Server**: Port 4008 (default)
-- **Frontend Dev Server**: Port 4009 (default)
-- These ports can be changed in the `.env` file
+## Session management
 
-### Database Configuration
+- In-memory per-user session store (`server/archieSession.js`)
+- Sessions identified by UUID stored in browser `sessionStorage` (per tab)
+- Sessions expire after 2 hours of inactivity; eviction runs every 15 minutes
+- **Not persisted** — chat history is lost on server restart
 
-#### Initial Setup and Table Structure
-- **Database File**: `server/database/geminicliui_auth.db`
-- **Database Type**: SQLite 3
-- **Initialization**: Automatically created and initialized on server startup
+---
 
-#### User Table Details
+## Local development
 
-**Table Name**: `geminicliui_users`
+### Prerequisites
+- Node.js 20+
+- A Google Gemini API key
 
-| Column | Data Type | Constraints | Description |
-|--------|-----------|-------------|-------------|
-| `id` | INTEGER | PRIMARY KEY AUTOINCREMENT | Unique user identifier |
-| `username` | TEXT | UNIQUE NOT NULL | Login username (email recommended) |
-| `password_hash` | TEXT | NOT NULL | bcrypt hashed password |
-| `created_at` | DATETIME | DEFAULT CURRENT_TIMESTAMP | Account creation timestamp |
-| `last_login` | DATETIME | NULL | Last login timestamp |
-| `is_active` | BOOLEAN | DEFAULT 1 | Account active/inactive status |
+### Setup
 
-**Indexes**:
-- `idx_geminicliui_users_username`: For fast username lookups
-- `idx_geminicliui_users_active`: For filtering active users
+```bash
+cd archie-chatbot
+npm install
+```
 
-#### First Run Setup
-1. On first server startup, database file is automatically created if it doesn't exist
-2. Table structure is loaded from `server/database/init.sql`
-3. First access displays user registration screen
-4. First user is registered as administrator
+Create a `.env` file:
 
-#### Security Features
-- Passwords are hashed with bcrypt before storage
-- JWT token-based authentication system
-- Session management with timeout functionality
-- SQL injection protection (prepared statements used)
+```env
+GEMINI_API_KEY=your-key-here
+ARCHIE_ADMIN_PASSWORD=choose-a-password
+NODE_ENV=development
+```
 
-## Troubleshooting
+Start development servers (Express + Vite concurrently):
 
-### Common Issues & Solutions
+```bash
+npm run dev
+```
 
-#### "No Gemini projects found"
-**Problem**: The UI shows no projects or empty project list
-**Solutions**:
-- Ensure Gemini CLI is properly installed
-- Run `gemini` command in at least one project directory to initialize
-- Verify `~/.gemini/projects/` directory exists and has proper permissions
+- Frontend: `http://localhost:4009`
+- API: `http://localhost:4008`
 
-#### File Explorer Issues
-**Problem**: Files not loading, permission errors, empty directories
-**Solutions**:
-- Check project directory permissions (`ls -la` in terminal)
-- Verify the project path exists and is accessible
-- Review server console logs for detailed error messages
-- Ensure you're not trying to access system directories outside project scope
+First visit shows a registration screen. Register the first user — this becomes the admin account.
 
-#### Model Selection Not Working
-**Problem**: Selected model is not being used
-**Solutions**:
-- After selecting a model in settings, make sure to click "Save Settings"
-- Clear browser local storage and reconfigure
-- Verify the model name is displayed correctly in the chat interface
+### Seed the knowledge base
+
+Run once to scrape official Groninger Archieven help pages into the vector store:
+
+```bash
+node server/scripts/scrapeGA.js
+```
+
+---
+
+## Admin panel
+
+`/archie/admin` — password-protected (uses `ARCHIE_ADMIN_PASSWORD` env var, not a user account).
+
+From here you can:
+- Upload `.txt`, `.md`, or `.pdf` files (max 10 MB)
+- View indexed documents
+- Delete documents from the knowledge base
+
+Uploads are processed in the background. Large PDFs are chunked client-side (256 KB per request) to avoid proxy timeouts.
+
+---
+
+## Data storage
+
+| Data | Location (prod) | Location (dev) |
+|------|-----------------|----------------|
+| Vector store | `/data/archie-vectors/` (LanceDB) | `./server/database/archie-vectors/` |
+| Auth database | `/data/geminicliui_auth.db` (SQLite) | `./server/database/geminicliui_auth.db` |
+| Sessions | In-memory only | In-memory only |
+
+### Auth database schema
+
+**Table:** `geminicliui_users`
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | INTEGER PK | Auto-increment |
+| `username` | TEXT UNIQUE | Login name (email recommended) |
+| `password_hash` | TEXT | bcrypt hash |
+| `created_at` | DATETIME | Auto |
+| `last_login` | DATETIME | Nullable |
+| `is_active` | BOOLEAN | Default 1 |
+
+---
+
+## Deployment (Fly.io)
+
+```bash
+fly deploy
+```
+
+### Required secrets
+
+```bash
+fly secrets set GEMINI_API_KEY=...
+fly secrets set ARCHIE_ADMIN_PASSWORD=...
+```
+
+### fly.toml highlights
+
+- `primary_region = "ams"` — Amsterdam
+- Volume `archie_data` mounted at `/data` for persistent vector store and auth DB
+- `auto_stop_machines = true` / `min_machines_running = 0` — scales to zero when idle
+- `force_https = true`
+
+---
+
+## Environment variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `GEMINI_API_KEY` | Yes | Google Generative AI API key |
+| `ARCHIE_ADMIN_PASSWORD` | Yes | Password for `/archie/admin` |
+| `NODE_ENV` | No | Set to `production` in prod |
+| `DATA_DIR` | No | Override data directory (default: `/data` in prod, `./server/database` in dev) |
+
+---
 
 ## License
 
-GNU General Public License v3.0 - see [LICENSE](LICENSE) file for details.
-
-This project is open source and free to use, modify, and distribute under the GPL v3 license.
-
-### Original Project
-
-This project is based on [Claude Code UI](https://github.com/siteboon/claudecodeui) (GPL v3.0) with customizations.
-
-**Major Changes:**
-- Adapted from Claude CLI to Gemini CLI
-- Added authentication system (SQLite-based)
-- Gemini-specific model selection feature
-- Enhanced Japanese language support
-- UI adjustments and Gemini branding
-
-Thanks to the original Claude Code UI project.
-
-## Acknowledgments
-
-### Built With
-- **[Gemini CLI](https://github.com/google-gemini/gemini-cli)** - Google's official CLI
-- **[React](https://react.dev/)** - User interface library
-- **[Vite](https://vitejs.dev/)** - Fast build tool and dev server
-- **[Tailwind CSS](https://tailwindcss.com/)** - Utility-first CSS framework
-- **[CodeMirror](https://codemirror.net/)** - Advanced code editor
-
-## Support & Community
-
-### Stay Updated
-- **Star** this repository to show support
-- **Watch** for updates and new releases
-- **Follow** the project for announcements
-
----
+MIT
