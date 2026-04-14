@@ -1,7 +1,7 @@
 {
-  "name": "gemini-cli-ui",
+  "name": "archie-chatbot",
   "version": "1.8.1",
-  "description": "A stylish web-based UI for Gemini CLI",
+  "description": "AI chatbot for the Groninger Archieven",
   "type": "module",
   "main": "server/index.js",
   "scripts": {
