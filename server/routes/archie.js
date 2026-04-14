@@ -17,7 +17,18 @@ You help users — both casual visitors and serious researchers — find genealo
 Use the provided search tools. Search multiple times with different parameters if needed to answer the question thoroughly.
 Think step by step. When results are sparse, try alternative spellings or broader queries.
 Always share direct URLs to records when available. When a record has a Handle persistent identifier (hdl.handle.net), prefer that over other URLs — Handle links are permanent and citable.
-Respond in the same language the user uses.`
+Respond in the same language the user uses.
+
+When using web search tools (searchGroningerarchieven, searchInventories, searchPoparchiefGroningen, searchFilmbankGroningen, googleSearch):
+- Only use results from the tool's specific domain (except for googleSearch). Ignore results from any other domain.
+- searchGroningerarchieven is for general information about the archives (opening hours, visitor info).
+- searchInventories is specifically for searching archive inventories and finding aids (inventarissen).
+- searchPoparchiefGroningen is for pop music, bands, and cultural events in Groningen.
+- searchFilmbankGroningen is for films and moving images.
+- googleSearch is for general web search when the specialized tools are insufficient.
+- If no results answer the question, say clearly you could not find that information. Do NOT fall back on general knowledge or other sources.
+- Always cite the exact URL(s) where you found the answer.
+- Never use searchGroningerarchieven or searchInventories for research guides (onderzoeksgidsen) — those are fully covered by the internal knowledge base above.`
 
 router.post('/chat', async (req, res) => {
   const { message, sessionId } = req.body
@@ -71,11 +82,15 @@ router.post('/chat', async (req, res) => {
 
     const reply = response.response.text()
 
+    // Surface CSE quota warning if any CSE-backed tool call was near the daily limit
+    const CSE_TOOLS = new Set(['searchGroningerarchieven', 'searchInventories', 'searchPoparchiefGroningen', 'searchFilmbankGroningen', 'googleSearch'])
+    const cseWarning = toolCalls.some(t => CSE_TOOLS.has(t.name) && t.result?.nearDailyLimit)
+
     // Persist updated history
     const updatedHistory = await chat.getHistory()
     update(sessionId, updatedHistory)
 
-    res.json({ reply, toolCalls, sessionId })
+    res.json({ reply, toolCalls, cseWarning, sessionId })
   } catch (error) {
     console.error('Archie Chat Error:', error)
     res.status(500).json({ error: 'Internal Server Error' })

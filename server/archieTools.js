@@ -1,10 +1,27 @@
 import fetch from 'node-fetch'
+import { recordCseRequest } from './archieSearchMonitor.js'
 
 const BEELDBANK_API_KEY = 'fd45b590-346a-11e5-a2cb-0800200c9a66'
 const GENEALOGY_API_KEY = '6976bb7e-0c61-4f03-bf5b-df645d5fd086'
+const CSE_API_KEY = process.env.GOOGLE_CSE_KEY
+const CSE_CX = process.env.GOOGLE_CSE_CX
 
 // Gemini function declarations
 export const toolDeclarations = [
+  {
+    name: 'searchGroningerarchieven',
+    description: 'Search www.groningerarchieven.nl for institutional information: opening hours, contact details, visitor info, collections overview, events, policies, reading room rules, and general archive information. Use this tool for questions about the Groninger Archieven as an institution. Do NOT use this for genealogical person records or historical images — use searchAlleGroningers and searchBeeldbank for those. Do NOT use this for research guides (onderzoeksgidsen) — those are available in the internal knowledge base, use that instead.',
+    parameters: {
+      type: 'object',
+      properties: {
+        q: {
+          type: 'string',
+          description: 'Search query, e.g. "openingstijden" or "aanvragen archiefstukken".'
+        }
+      },
+      required: ['q']
+    }
+  },
   {
     name: 'searchAlleGroningers',
     description: 'Search genealogical records (birth, marriage, death, baptism registers, etc.) in the Groninger Archieven via AlleGroningers. Use multiple calls with different parameters to find comprehensive results.',
@@ -67,19 +84,123 @@ export const toolDeclarations = [
   },
   {
     name: 'searchInventories',
-    description: 'Search archive inventories and finding aids. Currently returns no results — this source is under development.',
+    description: 'Search archive inventories and finding aids on www.groningerarchieven.nl. Use for questions about specific archive collections, inventory numbers, collection descriptions, and finding aids.',
     parameters: {
       type: 'object',
       properties: {
         q: {
           type: 'string',
-          description: 'Keyword search query.'
+          description: 'Keyword search query, e.g. "inventarisnummer" or collection name.'
+        }
+      },
+      required: ['q']
+    }
+  },
+  {
+    name: 'searchPoparchiefGroningen',
+    description: 'Search poparchiefgroningen.nl for information about pop music, pop culture, concerts, bands, venues, and current cultural events in Groningen. Use this tool whenever the question is about pop music, pop culture, or contemporary cultural life in Groningen.',
+    parameters: {
+      type: 'object',
+      properties: {
+        q: {
+          type: 'string',
+          description: 'Search query, e.g. a band name, venue, or event.'
+        }
+      },
+      required: ['q']
+    }
+  },
+  {
+    name: 'searchFilmbankGroningen',
+    description: 'Search filmbankgroningen.nl for information about films, videos, cinema, and moving image collections related to Groningen. Use this tool whenever the words "film", "video", "cinema", or "documentaire" appear in the question.',
+    parameters: {
+      type: 'object',
+      properties: {
+        q: {
+          type: 'string',
+          description: 'Search query, e.g. a film title, director, or subject.'
+        }
+      },
+      required: ['q']
+    }
+  },
+  {
+    name: 'googleSearch',
+    description: 'Perform a general web search for information NOT found in the specialized archival tools. Use this sparingly for general historical context or identifying entities that might be found in the archives later.',
+    parameters: {
+      type: 'object',
+      properties: {
+        q: {
+          type: 'string',
+          description: 'Search query.'
         }
       },
       required: ['q']
     }
   }
 ]
+
+// Shared helper: search a specific site via Google Custom Search API
+async function searchSite(q, siteHost) {
+  if (!CSE_API_KEY || !CSE_CX) {
+    return { error: 'Google Custom Search not configured (GOOGLE_CSE_KEY / GOOGLE_CSE_CX missing).' }
+  }
+
+  const monitor = recordCseRequest()
+  if (monitor.overLimit) {
+    return { error: 'Daily Google Custom Search quota (100 requests) has been reached. Try again tomorrow.' }
+  }
+
+  try {
+    const params = new URLSearchParams({
+      key: CSE_API_KEY,
+      cx: CSE_CX,
+      q,
+      num: 5
+    })
+    if (siteHost) {
+      params.set('siteSearch', siteHost)
+      params.set('siteSearchFilter', 'i')  // 'i' = include only this site
+    }
+    const response = await fetch(`https://www.googleapis.com/customsearch/v1?${params}`)
+    const data = await response.json()
+
+    if (data.error) {
+      return { error: `CSE API error: ${data.error.message}` }
+    }
+
+    const results = (data.items || []).map(item => ({
+      title: item.title,
+      url: item.link,
+      snippet: item.snippet
+    }))
+
+    return {
+      results,
+      total: data.searchInformation?.totalResults ?? 0,
+      usageToday: monitor.count,
+      nearDailyLimit: monitor.nearLimit
+    }
+  } catch (e) {
+    return { error: e.message }
+  }
+}
+
+async function searchGroningerarchieven({ q }) {
+  return searchSite(q, 'www.groningerarchieven.nl')
+}
+
+async function searchPoparchiefGroningen({ q }) {
+  return searchSite(q, 'poparchiefgroningen.nl')
+}
+
+async function searchFilmbankGroningen({ q }) {
+  return searchSite(q, 'filmbankgroningen.nl')
+}
+
+async function googleSearch({ q }) {
+  return searchSite(q)
+}
 
 async function searchAlleGroningers({ q, deed_type, gemeente, rows = 5, start = 0 }) {
   try {
@@ -163,15 +284,19 @@ async function searchBeeldbank({ q, rows = 5, start = 0, from_date, to_date }) {
   }
 }
 
-function searchInventories() {
-  return { records: [], total: 0 }
+async function searchInventories({ q }) {
+  return searchSite(q, 'www.groningerarchieven.nl')
 }
 
 export async function executeTool(name, args) {
   switch (name) {
+    case 'searchGroningerarchieven': return searchGroningerarchieven(args)
+    case 'searchPoparchiefGroningen': return searchPoparchiefGroningen(args)
+    case 'searchFilmbankGroningen': return searchFilmbankGroningen(args)
     case 'searchAlleGroningers': return searchAlleGroningers(args)
     case 'searchBeeldbank': return searchBeeldbank(args)
     case 'searchInventories': return searchInventories(args)
+    case 'googleSearch': return googleSearch(args)
     default: return { error: `Unknown tool: ${name}` }
   }
 }
