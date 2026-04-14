@@ -47,7 +47,11 @@ router.post('/chat', async (req, res) => {
     const ragSection = ragChunks.length > 0
       ? `\n\n## Archive Knowledge\n${ragChunks.join('\n\n---\n\n')}`
       : ''
-    const systemInstruction = SYSTEM_INSTRUCTION_BASE + ragSection
+    
+    const now = new Date()
+    const dateContext = `\n\nToday is ${now.toLocaleDateString('nl-NL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}. Current time: ${now.toLocaleTimeString('nl-NL')}.`
+    
+    const systemInstruction = SYSTEM_INSTRUCTION_BASE + ragSection + dateContext + `\n\nFor questions about current events, opening hours for specific dates, or any information that might change over time, ALWAYS prioritize using the search tools over the provided Archive Knowledge chunks.`
 
     const model = genAI.getGenerativeModel({
       model: 'gemini-2.5-flash',
