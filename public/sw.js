@@ -1,5 +1,5 @@
-// Service Worker for Gemini CLI UI PWA
-const CACHE_NAME = 'gemini-ui-v1';
+// Service Worker for Archie Chatbot PWA
+const CACHE_NAME = 'archie-v1';
 const urlsToCache = [
   '/',
   '/index.html',
