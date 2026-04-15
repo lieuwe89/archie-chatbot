@@ -189,12 +189,12 @@ Uploads are processed in the background. Large PDFs are chunked client-side (256
 | Data | Location (prod) | Location (dev) |
 |------|-----------------|----------------|
 | Vector store | `/data/archie-vectors/` (LanceDB) | `./server/database/archie-vectors/` |
-| Auth database | `/data/geminicliui_auth.db` (SQLite) | `./server/database/geminicliui_auth.db` |
+| Auth database | `/data/archie_auth.db` (SQLite) | `./server/database/archie_auth.db` |
 | Sessions | In-memory only | In-memory only |
 
 ### Auth database schema
 
-**Table:** `geminicliui_users`
+**Table:** `archie_users`
 
 | Column | Type | Notes |
 |--------|------|-------|

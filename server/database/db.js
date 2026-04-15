@@ -8,8 +8,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const DB_PATH = process.env.DATA_DIR
-  ? path.join(process.env.DATA_DIR, 'geminicliui_auth.db')
-  : path.join(__dirname, 'geminicliui_auth.db');
+  ? path.join(process.env.DATA_DIR, 'archie_auth.db')
+  : path.join(__dirname, 'archie_auth.db');
 const INIT_SQL_PATH = path.join(__dirname, 'init.sql');
 
 // Create database connection
@@ -33,7 +33,7 @@ const userDb = {
   // Check if any users exist
   hasUsers: () => {
     try {
-      const row = db.prepare('SELECT COUNT(*) as count FROM geminicliui_users').get();
+      const row = db.prepare('SELECT COUNT(*) as count FROM archie_users').get();
       return row.count > 0;
     } catch (err) {
       throw err;
@@ -43,7 +43,7 @@ const userDb = {
   // Create a new user
   createUser: (username, passwordHash) => {
     try {
-      const stmt = db.prepare('INSERT INTO geminicliui_users (username, password_hash) VALUES (?, ?)');
+      const stmt = db.prepare('INSERT INTO archie_users (username, password_hash) VALUES (?, ?)');
       const result = stmt.run(username, passwordHash);
       return { id: result.lastInsertRowid, username };
     } catch (err) {
@@ -54,7 +54,7 @@ const userDb = {
   // Get user by username
   getUserByUsername: (username) => {
     try {
-      const row = db.prepare('SELECT * FROM geminicliui_users WHERE username = ? AND is_active = 1').get(username);
+      const row = db.prepare('SELECT * FROM archie_users WHERE username = ? AND is_active = 1').get(username);
       return row;
     } catch (err) {
       throw err;
@@ -64,7 +64,7 @@ const userDb = {
   // Update last login time
   updateLastLogin: (userId) => {
     try {
-      db.prepare('UPDATE geminicliui_users SET last_login = CURRENT_TIMESTAMP WHERE id = ?').run(userId);
+      db.prepare('UPDATE archie_users SET last_login = CURRENT_TIMESTAMP WHERE id = ?').run(userId);
     } catch (err) {
       throw err;
     }
@@ -73,7 +73,7 @@ const userDb = {
   // Get user by ID
   getUserById: (userId) => {
     try {
-      const row = db.prepare('SELECT id, username, created_at, last_login FROM geminicliui_users WHERE id = ? AND is_active = 1').get(userId);
+      const row = db.prepare('SELECT id, username, created_at, last_login FROM archie_users WHERE id = ? AND is_active = 1').get(userId);
       return row;
     } catch (err) {
       throw err;

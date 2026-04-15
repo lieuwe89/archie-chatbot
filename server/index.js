@@ -850,7 +850,7 @@ async function startServer() {
         userDb.createUser(process.env.ADMIN_USERNAME, hash);
         console.log(`Admin user "${process.env.ADMIN_USERNAME}" created.`);
       } else {
-        db.prepare('UPDATE geminicliui_users SET password_hash = ? WHERE username = ?').run(hash, process.env.ADMIN_USERNAME);
+        db.prepare('UPDATE archie_users SET password_hash = ? WHERE username = ?').run(hash, process.env.ADMIN_USERNAME);
         console.log(`Admin user "${process.env.ADMIN_USERNAME}" password updated.`);
       }
     }

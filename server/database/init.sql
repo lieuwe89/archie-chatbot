@@ -1,8 +1,8 @@
 -- Initialize authentication database
 PRAGMA foreign_keys = ON;
 
--- Users table (single user system) - prefixed with geminicliui_ to avoid conflicts
-CREATE TABLE IF NOT EXISTS geminicliui_users (
+-- Users table (single user system) - prefixed with archie_ to avoid conflicts
+CREATE TABLE IF NOT EXISTS archie_users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
@@ -12,5 +12,5 @@ CREATE TABLE IF NOT EXISTS geminicliui_users (
 );
 
 -- Indexes for performance
-CREATE INDEX IF NOT EXISTS idx_geminicliui_users_username ON geminicliui_users(username);
-CREATE INDEX IF NOT EXISTS idx_geminicliui_users_active ON geminicliui_users(is_active);
+CREATE INDEX IF NOT EXISTS idx_archie_users_username ON archie_users(username);
+CREATE INDEX IF NOT EXISTS idx_archie_users_active ON archie_users(is_active);
