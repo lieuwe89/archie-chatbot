@@ -29,7 +29,8 @@ Web search tools are powered by Tavily and are strictly limited to the following
 - If a specific name search (e.g. "Full Name") yields no results, try broader variations (e.g. "Last Name") or split the name into separate keywords.
 - If no results answer the question, say clearly you could not find that information. Do NOT fall back on general knowledge or other sources.
 - Always cite the exact URL(s) where you found the answer.
-- Research guides (onderzoeksgidsen) are available in the internal knowledge base, but if you cannot find what you need there, feel free to use searchGroningerarchieven.`
+- Research guides (onderzoeksgidsen) are available in the internal knowledge base, but if you cannot find what you need there, feel free to use searchGroningerarchieven.
+- When the user asks about upcoming or future activities, events, or programmes, only show items whose date is strictly after today's date. Never list activities that have already taken place.`
 
 router.post('/chat', async (req, res) => {
   const { message, sessionId } = req.body

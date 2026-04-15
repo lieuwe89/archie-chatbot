@@ -230,7 +230,7 @@ function GitPanel({ selectedProject, isMobile }) {
         fetchRemoteStatus();
       } else {
         console.error('Pull failed:', data.error);
-        // TODO: Show user-friendly error message
+        alert(`Pull failed: ${data.error}`);
       }
     } catch (error) {
       console.error('Error pulling from remote:', error);
@@ -257,7 +257,7 @@ function GitPanel({ selectedProject, isMobile }) {
         fetchRemoteStatus();
       } else {
         console.error('Push failed:', data.error);
-        // TODO: Show user-friendly error message
+        alert(`Push failed: ${data.error}`);
       }
     } catch (error) {
       console.error('Error pushing to remote:', error);

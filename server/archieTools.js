@@ -1,8 +1,8 @@
 import fetch from 'node-fetch'
 import { recordSearchRequest } from './archieSearchMonitor.js'
 
-const BEELDBANK_API_KEY = 'fd45b590-346a-11e5-a2cb-0800200c9a66'
-const GENEALOGY_API_KEY = '6976bb7e-0c61-4f03-bf5b-df645d5fd086'
+const BEELDBANK_API_KEY = process.env.BEELDBANK_API_KEY || 'fd45b590-346a-11e5-a2cb-0800200c9a66'
+const GENEALOGY_API_KEY = process.env.GENEALOGY_API_KEY || '6976bb7e-0c61-4f03-bf5b-df645d5fd086'
 const TAVILY_API_KEY = process.env.TAVILY_API_KEY
 
 // Domains available for Tavily web search
