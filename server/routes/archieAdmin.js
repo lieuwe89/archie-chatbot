@@ -158,12 +158,15 @@ function settingsPage() {
   </div>
   <script>
     function updateKeyDisplay() {
-      const provider = document.getElementById('provider').value;
-      document.getElementById('gemini-key').style.display = provider === 'gemini' ? 'block' : 'none';
-      document.getElementById('claude-key').style.display = provider === 'claude' ? 'block' : 'none';
-      document.getElementById('openrouter-key').style.display = provider === 'openrouter' ? 'block' : 'none';
+      const provider = document.getElementById('provider')?.value || 'gemini';
+      const gemini = document.getElementById('gemini-key');
+      const claude = document.getElementById('claude-key');
+      const openrouter = document.getElementById('openrouter-key');
+      if (gemini) gemini.style.display = provider === 'gemini' ? 'block' : 'none';
+      if (claude) claude.style.display = provider === 'claude' ? 'block' : 'none';
+      if (openrouter) openrouter.style.display = provider === 'openrouter' ? 'block' : 'none';
     }
-    updateKeyDisplay();
+    document.addEventListener('DOMContentLoaded', updateKeyDisplay);
   </script>
 </body>
 </html>`
