@@ -12,7 +12,7 @@ const initSessionStore = async () => {
   if (redisUrl) {
     try {
       console.log('[Sessions] Initializing Redis session store...');
-      const redisClient = createClient({ url: redisUrl });
+      const redisClient = createClient({ url: redisUrl, socket: { reconnectStrategy: (retries) => Math.min(retries * 50, 500) } });
 
       redisClient.on('error', (err) => {
         console.error('[Sessions] Redis error:', err.message);
@@ -21,11 +21,10 @@ const initSessionStore = async () => {
       await redisClient.connect();
 
       store = new RedisStore({ client: redisClient, prefix: 'archie:session:' });
-      console.log('[Sessions] Connected to Redis');
+      console.log('[Sessions] ✓ Connected to Redis');
       return store;
     } catch (err) {
-      console.warn('[Sessions] Redis connection failed at', process.env.REDIS_URL, ':', err.message);
-      console.warn('[Sessions] Error details:', err.code || err.constructor.name);
+      console.warn('[Sessions] ✗ Connection failed:', err.message, 'URL:', redisUrl.split(':')[1].substring(0, 20) + '...');
     }
   }
 
