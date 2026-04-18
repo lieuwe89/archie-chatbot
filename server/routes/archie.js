@@ -29,7 +29,8 @@ export async function reinitializeLLMProvider() {
   }
 }
 
-await reinitializeLLMProvider()
+// Delay initialization to ensure env vars are loaded
+setTimeout(reinitializeLLMProvider, 100)
 
 const SYSTEM_INSTRUCTION_BASE = `You are Archie, the digital archivist for the Groninger Archieven.
 You help users — both casual visitors and serious researchers — find genealogical records and archival materials.

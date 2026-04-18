@@ -5,7 +5,7 @@ export class OpenRouterProvider extends LLMProvider {
   constructor(apiKey) {
     super(apiKey)
     this.client = null
-    this.model = 'openrouter/auto'
+    this.model = 'openai/gpt-4-turbo'
     this.messageHistory = []
   }
 
@@ -61,7 +61,7 @@ export class OpenRouterProvider extends LLMProvider {
       messages: openaiMessages,
       tools: tools.length > 0 ? tools : undefined,
       tool_choice: tools.length > 0 ? 'auto' : undefined,
-      max_tokens: 4096
+      max_tokens: 2048
     })
 
     return this.parseResponse(response)
@@ -102,7 +102,7 @@ export class OpenRouterProvider extends LLMProvider {
       messages: this.messageHistory,
       tools: tools.length > 0 ? tools : undefined,
       tool_choice: tools.length > 0 ? 'auto' : undefined,
-      max_tokens: 4096
+      max_tokens: 2048
     })
 
     return this.parseResponse(response)
