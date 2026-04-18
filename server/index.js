@@ -16,7 +16,7 @@ import express from 'express';
 import http from 'http';
 import cors from 'cors';
 import session from 'express-session';
-import { SQLiteSessionStore } from './middleware/sessionStore.js';
+import { initSessionStore } from './middleware/sessionStoreFactory.js';
 import archieAdminRoutes from './routes/archieAdmin.js';
 import archieRoutes from './routes/archie.js';
 import authRoutes from './routes/auth.js';
@@ -28,13 +28,6 @@ const server = http.createServer(app);
 
 app.use(cors());
 app.use(express.json());
-app.use(session({
-  store: new SQLiteSessionStore(),
-  secret: process.env.ARCHIE_SESSION_SECRET || 'archie-dev-secret',
-  resave: false,
-  saveUninitialized: false,
-  cookie: { httpOnly: true, maxAge: 24 * 60 * 60 * 1000 }
-}));
 
 // Authentication routes (public)
 app.use('/api/auth', authRoutes);
@@ -57,7 +50,7 @@ app.get('/archie*', (req, res, next) => {
 });
 
 // Serve React app for all other routes
-app.get('*', (req, res) => { 
+app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
 
@@ -66,6 +59,15 @@ const PORT = process.env.PORT || 4008;
 // Initialize database and start server
 async function startServer() {
   try {
+    const sessionStore = await initSessionStore();
+    app.use(session({
+      store: sessionStore,
+      secret: process.env.ARCHIE_SESSION_SECRET || 'archie-dev-secret',
+      resave: false,
+      saveUninitialized: false,
+      cookie: { httpOnly: true, maxAge: 24 * 60 * 60 * 1000 }
+    }));
+
     initializeDatabase();
     
     // Auto-create/update admin user logic

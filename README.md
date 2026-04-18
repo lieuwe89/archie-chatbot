@@ -122,10 +122,25 @@ Tavily-backed tools share usage tracking in SQLite (`tavily_usage` table); the s
 
 ## Session management
 
-- In-memory per-user session store (`server/archieSession.js`)
-- Sessions identified by UUID stored in browser `sessionStorage` (per tab)
-- Sessions expire after 2 hours of inactivity; eviction runs every 15 minutes
-- **Not persisted** — chat history is lost on server restart
+- **Redis** (when `REDIS_URL` is set) — sessions shared across all instances
+- **SQLite** (fallback) — sessions persisted to database but not shared between instances
+- Sessions identified by cookie (server-side)
+- Sessions expire after 24 hours
+- Chat history stored per session in server memory (lost on restart)
+
+### Multi-instance deployment
+
+For multiple Archie instances (e.g., Fly.io with multiple machines), use Redis to sync sessions:
+
+```bash
+# Set Redis URL in production secrets
+fly secrets set REDIS_URL=redis://your-redis-server:6379
+```
+
+Without Redis, each instance has its own SQLite database and sessions won't sync. Use Redis for:
+- Multiple Fly.io machines
+- Multiple physical servers
+- Scaling without shared filesystem
 
 ---
 
