@@ -134,7 +134,7 @@ export class OpenRouterProvider extends LLMProvider {
       }))
     }
 
-    return { text, toolCalls: toolCalls.map(tc => ({ name: tc.name, args: tc.args })) }
+    return { text, toolCalls: toolCalls.map(tc => ({ name: tc.name, args: tc.args, toolCallId: tc.toolCallId })) }
   }
 
   formatToolResponse(toolName, result) {

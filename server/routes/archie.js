@@ -111,11 +111,15 @@ router.post('/chat', async (req, res) => {
       // Track all tool calls for response
       allToolCalls.push(...toolResults)
 
-      // Add assistant response to messages
-      currentMessages.push({
+      // Add assistant response to messages (with tool_calls if any)
+      const assistantMsg = {
         role: 'assistant',
         content: reply
-      })
+      }
+      if (llmProvider.lastAssistantMessage?.tool_calls?.length > 0) {
+        assistantMsg.tool_calls = llmProvider.lastAssistantMessage.tool_calls
+      }
+      currentMessages.push(assistantMsg)
 
       // Add tool results to messages
       for (const toolResult of toolResults) {
