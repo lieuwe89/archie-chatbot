@@ -172,7 +172,7 @@ function settingsPage() {
 </html>`
 }
 
-function dashboardPage(docs, pendingFiles = [], keyUpdated = false) {
+function dashboardPage(docs, pendingFiles = [], settingsUpdated = false) {
   const pendingRows = pendingFiles.map(f => `
     <tr>
       <td style="padding:0.5rem 0;border-bottom:1px solid #f0f0f0;color:#d97706">
