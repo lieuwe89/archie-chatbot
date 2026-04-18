@@ -16,6 +16,7 @@ import express from 'express';
 import http from 'http';
 import cors from 'cors';
 import session from 'express-session';
+import { SQLiteSessionStore } from './middleware/sessionStore.js';
 import archieAdminRoutes from './routes/archieAdmin.js';
 import archieRoutes from './routes/archie.js';
 import authRoutes from './routes/auth.js';
@@ -28,6 +29,7 @@ const server = http.createServer(app);
 app.use(cors());
 app.use(express.json());
 app.use(session({
+  store: new SQLiteSessionStore(),
   secret: process.env.ARCHIE_SESSION_SECRET || 'archie-dev-secret',
   resave: false,
   saveUninitialized: false,
