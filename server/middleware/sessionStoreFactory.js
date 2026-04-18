@@ -24,7 +24,8 @@ const initSessionStore = async () => {
       console.log('[Sessions] Connected to Redis');
       return store;
     } catch (err) {
-      console.warn('[Sessions] Redis connection failed, falling back to SQLite:', err.message);
+      console.warn('[Sessions] Redis connection failed at', process.env.REDIS_URL, ':', err.message);
+      console.warn('[Sessions] Error details:', err.code || err.constructor.name);
     }
   }
 
