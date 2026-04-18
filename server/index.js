@@ -29,31 +29,6 @@ const server = http.createServer(app);
 app.use(cors());
 app.use(express.json());
 
-// Authentication routes (public)
-app.use('/api/auth', authRoutes);
-
-// Archie front-end API Routes
-app.use('/api/archie', archieRoutes);
-app.use('/archie/api/archie', archieRoutes);
-
-// Archie knowledge base admin panel
-app.use('/archie/admin', archieAdminRoutes);
-
-// Root redirect to /archie/
-app.get('/', (req, res) => res.redirect('/archie/'));
-
-// Static files
-app.use('/archie', express.static(path.join(__dirname, '../dist'), { redirect: true }));
-app.get('/archie*', (req, res, next) => {
-  if (req.url.startsWith('/api')) return next();
-  res.sendFile(path.join(__dirname, '../dist/index.html'));
-});
-
-// Serve React app for all other routes
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dist/index.html'));
-});
-
 const PORT = process.env.PORT || 4008;
 
 // Initialize database and start server
@@ -67,6 +42,31 @@ async function startServer() {
       saveUninitialized: false,
       cookie: { httpOnly: true, maxAge: 24 * 60 * 60 * 1000 }
     }));
+
+    // Authentication routes (public)
+    app.use('/api/auth', authRoutes);
+
+    // Archie front-end API Routes
+    app.use('/api/archie', archieRoutes);
+    app.use('/archie/api/archie', archieRoutes);
+
+    // Archie knowledge base admin panel
+    app.use('/archie/admin', archieAdminRoutes);
+
+    // Root redirect to /archie/
+    app.get('/', (req, res) => res.redirect('/archie/'));
+
+    // Static files
+    app.use('/archie', express.static(path.join(__dirname, '../dist'), { redirect: true }));
+    app.get('/archie*', (req, res, next) => {
+      if (req.url.startsWith('/api')) return next();
+      res.sendFile(path.join(__dirname, '../dist/index.html'));
+    });
+
+    // Serve React app for all other routes
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(__dirname, '../dist/index.html'));
+    });
 
     initializeDatabase();
     
