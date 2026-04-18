@@ -5,7 +5,7 @@ export class OpenRouterProvider extends LLMProvider {
   constructor(apiKey) {
     super(apiKey)
     this.client = null
-    this.model = 'openai/gpt-3.5-turbo'
+    this.model = 'openrouter/auto'
     this.messageHistory = []
   }
 
