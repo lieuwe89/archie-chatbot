@@ -8,9 +8,16 @@ import { retrieve } from '../archieRag.js'
 const router = express.Router()
 
 let genAI = null
-if (process.env.GEMINI_API_KEY) {
-  genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
+
+export function reinitializeGenAI() {
+  if (process.env.GEMINI_API_KEY) {
+    genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
+  } else {
+    genAI = null
+  }
 }
+
+reinitializeGenAI()
 
 const SYSTEM_INSTRUCTION_BASE = `You are Archie, the digital archivist for the Groninger Archieven.
 You help users — both casual visitors and serious researchers — find genealogical records and archival materials.

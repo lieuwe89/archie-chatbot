@@ -75,7 +75,65 @@ function loginPage(error = '') {
 </html>`
 }
 
-function dashboardPage(docs, pendingFiles = []) {
+function settingsPage() {
+  const apiKey = process.env.GEMINI_API_KEY || ''
+  const hasKey = !!apiKey
+  const maskKey = apiKey ? apiKey.substring(0, 10) + '...' + apiKey.substring(apiKey.length - 4) : ''
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Archie Admin — Settings</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #f5f5f5; margin: 0; padding: 2rem; }
+    .card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); max-width: 640px; margin: 0 auto; }
+    h1 { margin: 0 0 0.25rem; font-size: 1.25rem; }
+    .subtitle { color: #666; font-size: 0.875rem; margin-bottom: 1.5rem; }
+    .setting-group { margin-bottom: 1.5rem; }
+    label { display: block; font-size: 0.875rem; color: #666; margin-bottom: 0.5rem; font-weight: 500; }
+    input[type=text], textarea { width: 100%; padding: 0.5rem; box-sizing: border-box; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; }
+    textarea { resize: vertical; min-height: 80px; }
+    .current-key { font-size: 0.8rem; color: #999; margin-top: 0.25rem; }
+    .button-group { display: flex; gap: 0.5rem; }
+    button { background: #d97706; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; }
+    button:hover { background: #b45309; }
+    a { color: #d97706; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .success { color: #16a34a; font-size: 0.875rem; margin-bottom: 1rem; }
+    .nav { margin-bottom: 1.5rem; display: flex; gap: 1rem; }
+    .nav a { color: #666; font-size: 0.875rem; text-decoration: none; }
+    .nav a:hover { color: #d97706; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+      <h1>Archie Admin — Settings</h1>
+      <form method="POST" action="/archie/admin/logout" style="display:inline">
+        <button type="submit" style="background:none;border:none;color:#666;cursor:pointer;font-size:0.875rem">Log out</button>
+      </form>
+    </div>
+    <div class="nav">
+      <a href="/archie/admin/documents">← Back to Documents</a>
+    </div>
+
+    <form method="POST" action="/archie/admin/api-key" style="display:flex;flex-direction:column">
+      <div class="setting-group">
+        <label for="api-key">Gemini API Key</label>
+        <textarea id="api-key" name="apiKey" placeholder="Paste your Gemini API key here" required></textarea>
+        ${hasKey ? `<div class="current-key">Current key: ${maskKey}</div>` : ''}
+      </div>
+      <div class="button-group">
+        <button type="submit">Save API Key</button>
+      </div>
+    </form>
+  </div>
+</body>
+</html>`
+}
+
+function dashboardPage(docs, pendingFiles = [], keyUpdated = false) {
   const pendingRows = pendingFiles.map(f => `
     <tr>
       <td style="padding:0.5rem 0;border-bottom:1px solid #f0f0f0;color:#d97706">
@@ -120,6 +178,10 @@ function dashboardPage(docs, pendingFiles = []) {
     #upload-progress { display: none; margin-bottom: 1rem; }
     #upload-progress progress { width: 100%; height: 6px; accent-color: #d97706; }
     #upload-error { display: none; color: #dc2626; font-size: 0.875rem; margin-bottom: 1rem; }
+    .nav { display: flex; gap: 1rem; margin-bottom: 1.5rem; }
+    .nav a { color: #d97706; font-size: 0.875rem; text-decoration: none; }
+    .nav a:hover { text-decoration: underline; }
+    .success { color: #16a34a; font-size: 0.875rem; margin-bottom: 1rem; background: #f0fdf4; padding: 0.75rem; border-radius: 4px; border-left: 3px solid #16a34a; }
   </style>
 </head>
 <body>
@@ -130,6 +192,10 @@ function dashboardPage(docs, pendingFiles = []) {
         <button type="submit" style="background:none;border:none;color:#666;cursor:pointer;font-size:0.875rem">Log out</button>
       </form>
     </div>
+    <div class="nav">
+      <a href="/archie/admin/settings">⚙️ Settings</a>
+    </div>
+    ${keyUpdated ? '<div class="success">✓ API key updated successfully</div>' : ''}
     <p class="subtitle">Upload documents to expand Archie's knowledge. Accepts .txt, .md, .pdf (max 10 MB)</p>
     <div class="upload-section">
       <input type="file" id="file-input" accept=".txt,.md,.pdf">
@@ -232,10 +298,78 @@ router.post('/logout', (req, res) => {
   req.session.destroy(() => res.redirect('/archie/admin'))
 })
 
+// GET /settings
+router.get('/settings', requireAdmin, (req, res) => {
+  res.send(settingsPage())
+})
+
+// POST /api-key — save new Gemini API key to .env
+router.post('/api-key', requireAdmin, express.urlencoded({ extended: false }), async (req, res) => {
+  const { apiKey } = req.body
+  if (!apiKey || !apiKey.trim()) {
+    return res.send(settingsPage())
+  }
+
+  try {
+    const fs = await import('fs/promises')
+    const path = await import('path')
+    const { fileURLToPath } = await import('url')
+    const { dirname } = await import('path')
+
+    const __filename = fileURLToPath(import.meta.url)
+    const __dirname = dirname(__filename)
+    const envPath = path.join(__dirname, '../.env')
+
+    // Read current .env
+    let envContent = ''
+    try {
+      envContent = await fs.readFile(envPath, 'utf8')
+    } catch (err) {
+      if (err.code !== 'ENOENT') throw err
+    }
+
+    // Parse and update
+    const lines = envContent.split('\n')
+    const newLines = []
+    let found = false
+
+    for (const line of lines) {
+      if (line.startsWith('GEMINI_API_KEY=')) {
+        newLines.push(`GEMINI_API_KEY=${apiKey.trim()}`)
+        found = true
+      } else if (line.trim()) {
+        newLines.push(line)
+      }
+    }
+
+    if (!found) {
+      newLines.push(`GEMINI_API_KEY=${apiKey.trim()}`)
+    }
+
+    await fs.writeFile(envPath, newLines.join('\n') + '\n', 'utf8')
+
+    // Update process.env
+    process.env.GEMINI_API_KEY = apiKey.trim()
+
+    // Re-initialize genAI in archie.js via import
+    const archieModule = await import('../routes/archie.js')
+    if (archieModule.reinitializeGenAI) {
+      archieModule.reinitializeGenAI()
+    }
+
+    // Redirect with success
+    res.redirect('/archie/admin/documents?keyUpdated=1')
+  } catch (err) {
+    console.error('Error updating API key:', err)
+    res.status(500).send(`Error updating API key: ${err.message}`)
+  }
+})
+
 // GET /documents
 router.get('/documents', requireAdmin, async (req, res) => {
   const docs = await listDocuments()
-  res.send(dashboardPage(docs, [...indexingFiles]))
+  const keyUpdated = req.query.keyUpdated === '1'
+  res.send(dashboardPage(docs, [...indexingFiles], keyUpdated))
 })
 
 // POST /upload-chunk — receives one 256 KB slice; reassembles and indexes when all arrive
