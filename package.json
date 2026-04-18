@@ -22,6 +22,7 @@
   "author": "Lieuwe Jongsma",
   "license": "MIT",
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.28.0",
     "@google/generative-ai": "^0.21.0",
     "@lancedb/lancedb": "^0.27.2",
     "@tailwindcss/typography": "^0.5.16",
@@ -39,6 +40,7 @@
     "mime-types": "^3.0.1",
     "multer": "^2.0.1",
     "node-fetch": "^2.7.0",
+    "openai": "^4.52.0",
     "pdf-parse": "^2.4.5",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

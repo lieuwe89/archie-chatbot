@@ -1,23 +1,35 @@
 // server/routes/archie.js
 import express from 'express'
-import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai'
+import { initializeLLMProvider, getProviderName } from '../llm-factory.js'
 import { getOrCreate, update } from '../archieSession.js'
 import { toolDeclarations, executeTool } from '../archieTools.js'
 import { retrieve } from '../archieRag.js'
 
 const router = express.Router()
 
-let genAI = null
+let llmProvider = null
 
-export function reinitializeGenAI() {
-  if (process.env.GEMINI_API_KEY) {
-    genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
-  } else {
-    genAI = null
+export async function reinitializeLLMProvider() {
+  try {
+    const providerName = getProviderName(process.env.LLM_PROVIDER || 'gemini')
+    const apiKeyEnvVar = `${providerName.toUpperCase()}_API_KEY`
+    const apiKey = process.env[apiKeyEnvVar]
+
+    if (!apiKey) {
+      console.warn(`[Archie] ${apiKeyEnvVar} not configured`)
+      llmProvider = null
+      return
+    }
+
+    llmProvider = await initializeLLMProvider(providerName, apiKey)
+    console.log(`[Archie] Initialized ${providerName} provider`)
+  } catch (error) {
+    console.error('[Archie] Error initializing LLM provider:', error.message)
+    llmProvider = null
   }
 }
 
-reinitializeGenAI()
+await reinitializeLLMProvider()
 
 const SYSTEM_INSTRUCTION_BASE = `You are Archie, the digital archivist for the Groninger Archieven.
 You help users — both casual visitors and serious researchers — find genealogical records and archival materials.
@@ -44,8 +56,9 @@ router.post('/chat', async (req, res) => {
   if (!message || !sessionId) {
     return res.status(400).json({ error: 'message and sessionId are required' })
   }
-  if (!genAI) {
-    return res.status(503).json({ error: 'GEMINI_API_KEY not configured' })
+  if (!llmProvider) {
+    const provider = getProviderName(process.env.LLM_PROVIDER || 'gemini')
+    return res.status(503).json({ error: `${provider.toUpperCase()}_API_KEY not configured` })
   }
 
   try {
@@ -56,101 +69,61 @@ router.post('/chat', async (req, res) => {
     const ragSection = ragChunks.length > 0
       ? `\n\n## Archive Knowledge\n${ragChunks.join('\n\n---\n\n')}`
       : ''
-    
+
     const now = new Date()
     const dateContext = `\n\nToday is ${now.toLocaleDateString('nl-NL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}. Current time: ${now.toLocaleTimeString('nl-NL')}.`
-    
+
     const systemInstruction = SYSTEM_INSTRUCTION_BASE + ragSection + dateContext + `\n\nFor questions about current events, opening hours for specific dates, or any information that might change over time, ALWAYS prioritize using the search tools over the provided Archive Knowledge chunks.`
 
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-2.5-flash',
-      tools: [{ functionDeclarations: toolDeclarations }],
-      systemInstruction,
-      safetySettings: [
-        {
-          category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-          threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-          threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-          threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
-        },
-        {
-          category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-          threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
-        },
-      ],
+    // Convert session.contents to normalized message format
+    const messages = (session.contents || []).map(content => {
+      if (typeof content === 'string') {
+        return { role: 'user', content }
+      }
+      if (content.role) {
+        return content
+      }
+      return { role: 'user', content: JSON.stringify(content) }
     })
 
-    const chat = model.startChat({ history: session.contents })
+    // Add current user message
+    messages.push({ role: 'user', content: message })
 
-    // First turn: user message
-    let response;
-    try {
-      response = await chat.sendMessage(message)
-    } catch (e) {
-      console.error('[Archie] Error in initial sendMessage:', e)
-      return res.status(500).json({ error: 'Gemini direct error', details: e.message })
-    }
+    // Get initial response from provider
+    let response = await llmProvider.chat(messages, toolDeclarations, systemInstruction)
+    let reply = response.text || ''
+    const allToolCalls = []
 
-    // Check if the prompt itself was blocked
-    if (response.response.promptFeedback?.blockReason) {
-      console.warn('[Archie] Prompt was blocked:', response.response.promptFeedback.blockReason)
-      return res.json({ 
-        reply: `Mijn excuses, maar ik kan deze vraag niet beantwoorden vanwege veiligheidsinstellingen (Reden: ${response.response.promptFeedback.blockReason}). Probeer uw vraag anders te formuleren.`, 
-        toolCalls: [], 
-        sessionId 
+    // Tool execution loop
+    let currentMessages = [...messages]
+    while (response.toolCalls?.length > 0) {
+      // Execute all tool calls in parallel
+      const toolResults = await Promise.all(
+        response.toolCalls.map(async tc => ({
+          name: tc.name,
+          args: tc.args,
+          toolUseId: tc.toolUseId,
+          result: await executeTool(tc.name, tc.args)
+        }))
+      )
+
+      // Track all tool calls for response
+      allToolCalls.push(...toolResults)
+
+      // Add assistant response to messages
+      currentMessages.push({
+        role: 'assistant',
+        content: reply
       })
-    }
 
-    const toolCalls = []
-
-    // Agentic loop: keep executing tools until model stops calling them
-    while (true) {
-      const fns = response.response.functionCalls()
-      if (!fns || fns.length === 0) break
-
-      const functionResponses = await Promise.all(fns.map(async fn => {
-        const result = await executeTool(fn.name, fn.args)
-        toolCalls.push({ name: fn.name, args: fn.args, result })
-        return {
-          functionResponse: {
-            name: fn.name,
-            response: { content: JSON.stringify(result) }
-          }
-        }
-      }))
-
-      response = await chat.sendMessage(functionResponses)
-    }
-
-    let reply = ''
-    try {
-      reply = response.response.text()
-    } catch (e) {
-      const candidate = response.response.candidates?.[0]
-      const finishReason = candidate?.finishReason
-      console.warn('[Archie] Error calling text() - possibly blocked. Reason:', finishReason, e.message)
-      
-      if (finishReason === 'SAFETY') {
-        reply = 'Mijn excuses, maar mijn antwoord is geblokkeerd door veiligheidsfilters vanwege de inhoud van de gevonden resultaten. Probeer uw vraag specifieker te maken.'
-      } else if (finishReason === 'RECITATION') {
-        reply = 'Mijn antwoord is geblokkeerd omdat het te veel leek op een letterlijke brontekst met copyright.'
-      } else if (finishReason === 'OTHER') {
-        reply = 'Er is een onbekende fout opgetreden in de verwerking van het antwoord (finishReason: OTHER).'
+      // Add tool results to messages
+      for (const toolResult of toolResults) {
+        currentMessages.push(llmProvider.formatToolResponse(toolResult.name, toolResult.result))
       }
-    }
 
-    if (!reply && !toolCalls.length) {
-      // Final check for candidate status if reply is still empty
-      const candidate = response.response.candidates?.[0]
-      if (candidate?.finishReason && candidate.finishReason !== 'STOP') {
-        reply = `Geen antwoord gegenereerd (Reden: ${candidate.finishReason}).`
-      }
+      // Get next response
+      response = await llmProvider.chat(currentMessages, toolDeclarations, systemInstruction)
+      reply = response.text || ''
     }
 
     // Surface Tavily quota warning if any Tavily-backed tool call was near the daily limit
@@ -160,16 +133,19 @@ router.post('/chat', async (req, res) => {
       'searchFilmbankGroningen',
       'searchGroningerkentekens'
     ])
-    const cseWarning = toolCalls.some(t => TAVILY_TOOLS.has(t.name) && t.result?.nearDailyLimit)
+    const cseWarning = allToolCalls.some(t => TAVILY_TOOLS.has(t.name) && t.result?.nearDailyLimit)
 
-    // Persist updated history
-    const updatedHistory = await chat.getHistory()
-    update(sessionId, updatedHistory)
+    // Persist updated messages
+    const normalizedMessages = currentMessages.map(m => ({
+      role: m.role,
+      parts: [{ text: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) }]
+    }))
+    update(sessionId, normalizedMessages)
 
-    res.json({ reply, toolCalls, cseWarning, sessionId })
+    res.json({ reply, toolCalls: allToolCalls.map(tc => ({ name: tc.name, args: tc.args, result: tc.result })), cseWarning, sessionId })
   } catch (error) {
     console.error('Archie Chat Error:', error)
-    res.status(500).json({ error: 'Internal Server Error' })
+    res.status(500).json({ error: 'Internal Server Error', details: error.message })
   }
 })
 

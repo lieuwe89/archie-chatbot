@@ -76,9 +76,12 @@ function loginPage(error = '') {
 }
 
 function settingsPage() {
-  const apiKey = process.env.GEMINI_API_KEY || ''
-  const hasKey = !!apiKey
-  const maskKey = apiKey ? apiKey.substring(0, 10) + '...' + apiKey.substring(apiKey.length - 4) : ''
+  const provider = process.env.LLM_PROVIDER || 'gemini'
+  const geminiKey = process.env.GEMINI_API_KEY || ''
+  const claudeKey = process.env.CLAUDE_API_KEY || ''
+  const openrouterKey = process.env.OPENROUTER_API_KEY || ''
+
+  const maskKey = (key) => key ? key.substring(0, 10) + '...' + key.substring(key.length - 4) : ''
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -92,8 +95,8 @@ function settingsPage() {
     .subtitle { color: #666; font-size: 0.875rem; margin-bottom: 1.5rem; }
     .setting-group { margin-bottom: 1.5rem; }
     label { display: block; font-size: 0.875rem; color: #666; margin-bottom: 0.5rem; font-weight: 500; }
-    input[type=text], textarea { width: 100%; padding: 0.5rem; box-sizing: border-box; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; }
-    textarea { resize: vertical; min-height: 80px; }
+    select, input[type=text], textarea { width: 100%; padding: 0.5rem; box-sizing: border-box; border: 1px solid #ddd; border-radius: 4px; font-family: monospace; }
+    textarea { resize: vertical; min-height: 80px; font-family: monospace; }
     .current-key { font-size: 0.8rem; color: #999; margin-top: 0.25rem; }
     .button-group { display: flex; gap: 0.5rem; }
     button { background: #d97706; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; }
@@ -104,6 +107,7 @@ function settingsPage() {
     .nav { margin-bottom: 1.5rem; display: flex; gap: 1rem; }
     .nav a { color: #666; font-size: 0.875rem; text-decoration: none; }
     .nav a:hover { color: #d97706; }
+    .provider-info { font-size: 0.8rem; color: #999; margin-top: 0.25rem; }
   </style>
 </head>
 <body>
@@ -118,17 +122,49 @@ function settingsPage() {
       <a href="/archie/admin/documents">← Back to Documents</a>
     </div>
 
-    <form method="POST" action="/archie/admin/api-key" style="display:flex;flex-direction:column">
+    <form method="POST" action="/archie/admin/settings" id="settingsForm" style="display:flex;flex-direction:column">
       <div class="setting-group">
-        <label for="api-key">Gemini API Key</label>
-        <textarea id="api-key" name="apiKey" placeholder="Paste your Gemini API key here" required></textarea>
-        ${hasKey ? `<div class="current-key">Current key: ${maskKey}</div>` : ''}
+        <label for="provider">LLM Provider</label>
+        <select id="provider" name="provider" onchange="updateKeyDisplay()">
+          <option value="gemini" ${provider === 'gemini' ? 'selected' : ''}>Gemini (Google)</option>
+          <option value="claude" ${provider === 'claude' ? 'selected' : ''}>Claude (Anthropic)</option>
+          <option value="openrouter" ${provider === 'openrouter' ? 'selected' : ''}>OpenRouter</option>
+        </select>
+        <div class="provider-info">Currently active: <strong>${provider}</strong></div>
       </div>
+
+      <div class="setting-group">
+        <label for="gemini-key">Gemini API Key</label>
+        <textarea id="gemini-key" name="gemini_api_key" placeholder="Paste your Gemini API key here"></textarea>
+        ${geminiKey ? `<div class="current-key">Current key: ${maskKey(geminiKey)}</div>` : ''}
+      </div>
+
+      <div class="setting-group">
+        <label for="claude-key">Claude API Key</label>
+        <textarea id="claude-key" name="claude_api_key" placeholder="Paste your Claude API key here"></textarea>
+        ${claudeKey ? `<div class="current-key">Current key: ${maskKey(claudeKey)}</div>` : ''}
+      </div>
+
+      <div class="setting-group">
+        <label for="openrouter-key">OpenRouter API Key</label>
+        <textarea id="openrouter-key" name="openrouter_api_key" placeholder="Paste your OpenRouter API key here"></textarea>
+        ${openrouterKey ? `<div class="current-key">Current key: ${maskKey(openrouterKey)}</div>` : ''}
+      </div>
+
       <div class="button-group">
-        <button type="submit">Save API Key</button>
+        <button type="submit">Save Settings</button>
       </div>
     </form>
   </div>
+  <script>
+    function updateKeyDisplay() {
+      const provider = document.getElementById('provider').value;
+      document.getElementById('gemini-key').style.display = provider === 'gemini' ? 'block' : 'none';
+      document.getElementById('claude-key').style.display = provider === 'claude' ? 'block' : 'none';
+      document.getElementById('openrouter-key').style.display = provider === 'openrouter' ? 'block' : 'none';
+    }
+    updateKeyDisplay();
+  </script>
 </body>
 </html>`
 }
@@ -195,7 +231,7 @@ function dashboardPage(docs, pendingFiles = [], keyUpdated = false) {
     <div class="nav">
       <a href="/archie/admin/settings">⚙️ Settings</a>
     </div>
-    ${keyUpdated ? '<div class="success">✓ API key updated successfully</div>' : ''}
+    ${settingsUpdated ? '<div class="success">✓ Settings updated successfully</div>' : ''}
     <p class="subtitle">Upload documents to expand Archie's knowledge. Accepts .txt, .md, .pdf (max 10 MB)</p>
     <div class="upload-section">
       <input type="file" id="file-input" accept=".txt,.md,.pdf">
@@ -303,10 +339,11 @@ router.get('/settings', requireAdmin, (req, res) => {
   res.send(settingsPage())
 })
 
-// POST /api-key — save new Gemini API key to .env
-router.post('/api-key', requireAdmin, express.urlencoded({ extended: false }), async (req, res) => {
-  const { apiKey } = req.body
-  if (!apiKey || !apiKey.trim()) {
+// POST /settings — save provider and API keys
+router.post('/settings', requireAdmin, express.urlencoded({ extended: false }), async (req, res) => {
+  const { provider, gemini_api_key, claude_api_key, openrouter_api_key } = req.body
+
+  if (!provider) {
     return res.send(settingsPage())
   }
 
@@ -328,48 +365,62 @@ router.post('/api-key', requireAdmin, express.urlencoded({ extended: false }), a
       if (err.code !== 'ENOENT') throw err
     }
 
-    // Parse and update
-    const lines = envContent.split('\n')
-    const newLines = []
-    let found = false
+    // Parse existing env variables
+    const lines = envContent.split('\n').filter(line => line.trim())
+    const envMap = new Map()
 
     for (const line of lines) {
-      if (line.startsWith('GEMINI_API_KEY=')) {
-        newLines.push(`GEMINI_API_KEY=${apiKey.trim()}`)
-        found = true
-      } else if (line.trim()) {
-        newLines.push(line)
+      if (line.includes('=')) {
+        const [key, ...valueParts] = line.split('=')
+        envMap.set(key.trim(), valueParts.join('='))
       }
     }
 
-    if (!found) {
-      newLines.push(`GEMINI_API_KEY=${apiKey.trim()}`)
+    // Update with new values
+    envMap.set('LLM_PROVIDER', provider.trim())
+
+    if (gemini_api_key?.trim()) {
+      envMap.set('GEMINI_API_KEY', gemini_api_key.trim())
+    }
+    if (claude_api_key?.trim()) {
+      envMap.set('CLAUDE_API_KEY', claude_api_key.trim())
+    }
+    if (openrouter_api_key?.trim()) {
+      envMap.set('OPENROUTER_API_KEY', openrouter_api_key.trim())
     }
 
-    await fs.writeFile(envPath, newLines.join('\n') + '\n', 'utf8')
+    // Write back to .env
+    const newEnvContent = Array.from(envMap.entries())
+      .map(([key, value]) => `${key}=${value}`)
+      .join('\n') + '\n'
+
+    await fs.writeFile(envPath, newEnvContent, 'utf8')
 
     // Update process.env
-    process.env.GEMINI_API_KEY = apiKey.trim()
+    process.env.LLM_PROVIDER = provider.trim()
+    if (gemini_api_key?.trim()) process.env.GEMINI_API_KEY = gemini_api_key.trim()
+    if (claude_api_key?.trim()) process.env.CLAUDE_API_KEY = claude_api_key.trim()
+    if (openrouter_api_key?.trim()) process.env.OPENROUTER_API_KEY = openrouter_api_key.trim()
 
-    // Re-initialize genAI in archie.js via import
+    // Re-initialize LLM provider
     const archieModule = await import('../routes/archie.js')
-    if (archieModule.reinitializeGenAI) {
-      archieModule.reinitializeGenAI()
+    if (archieModule.reinitializeLLMProvider) {
+      await archieModule.reinitializeLLMProvider()
     }
 
     // Redirect with success
-    res.redirect('/archie/admin/documents?keyUpdated=1')
+    res.redirect('/archie/admin/documents?settingsUpdated=1')
   } catch (err) {
-    console.error('Error updating API key:', err)
-    res.status(500).send(`Error updating API key: ${err.message}`)
+    console.error('Error updating settings:', err)
+    res.status(500).send(`Error updating settings: ${err.message}`)
   }
 })
 
 // GET /documents
 router.get('/documents', requireAdmin, async (req, res) => {
   const docs = await listDocuments()
-  const keyUpdated = req.query.keyUpdated === '1'
-  res.send(dashboardPage(docs, [...indexingFiles], keyUpdated))
+  const settingsUpdated = req.query.settingsUpdated === '1'
+  res.send(dashboardPage(docs, [...indexingFiles], settingsUpdated))
 })
 
 // POST /upload-chunk — receives one 256 KB slice; reassembles and indexes when all arrive
