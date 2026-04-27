@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.2.1] - 2026-04-27
+### Fixed
+- Tool-call labels in chat UI now show friendly names for every search tool (Groninger Archieven, OpenArch, Poparchief, Filmbank, Kentekens, archive catalog) instead of raw camelCase function names
+
 ## [2.2.0] - 2026-04-27
 ### Added
 - OAI-PMH harvester (`server/scripts/harvest.js`) mirrors Groninger Archieven EAD finding aids into local SQLite/FTS5 (~3.9 MB, 2,757 records)

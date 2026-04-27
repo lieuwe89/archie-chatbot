@@ -216,7 +216,13 @@ const ToolCallList = ({ toolCalls }) => {
   const labelFor = (name) => ({
     searchAlleGroningers: t('archie.searchAlleGroningers'),
     searchBeeldbank: t('archie.searchBeeldbank'),
-    searchInventories: t('archie.searchInventories')
+    searchInventories: t('archie.searchInventories'),
+    searchArchieCatalog: t('archie.searchArchieCatalog'),
+    searchGroningerarchieven: t('archie.searchGroningerarchieven'),
+    searchOpenArch: t('archie.searchOpenArch'),
+    searchPoparchiefGroningen: t('archie.searchPoparchiefGroningen'),
+    searchFilmbankGroningen: t('archie.searchFilmbankGroningen'),
+    searchGroningerkentekens: t('archie.searchGroningerkentekens')
   }[name] || t('archie.calledTool', { name }))
 
   return (

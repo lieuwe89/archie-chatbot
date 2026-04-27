@@ -13,6 +13,12 @@
     "searchAlleGroningers": "AlleGroningers doorzocht",
     "searchBeeldbank": "Beeldbank doorzocht",
     "searchInventories": "Inventarissen doorzocht",
+    "searchArchieCatalog": "Archiefcatalogus doorzocht",
+    "searchGroningerarchieven": "Groninger Archieven doorzocht",
+    "searchOpenArch": "OpenArch doorzocht",
+    "searchPoparchiefGroningen": "Poparchief Groningen doorzocht",
+    "searchFilmbankGroningen": "Filmbank Groningen doorzocht",
+    "searchGroningerkentekens": "Groninger Kentekens doorzocht",
     "calledTool": "{{name}} aangeroepen"
   },
   "login": {
