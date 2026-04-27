@@ -1,5 +1,6 @@
 import fetch from 'node-fetch'
 import { recordSearchRequest } from './archieSearchMonitor.js'
+import { openCatalogDb, search as catalogSearch } from './database/archieCatalog.js'
 
 const BEELDBANK_API_KEY = process.env.BEELDBANK_API_KEY || 'fd45b590-346a-11e5-a2cb-0800200c9a66'
 const GENEALOGY_API_KEY = process.env.GENEALOGY_API_KEY || '6976bb7e-0c61-4f03-bf5b-df645d5fd086'
@@ -16,8 +17,26 @@ const TAVILY_DOMAINS = [
 // Gemini function declarations
 export const toolDeclarations = [
   {
+    name: 'searchArchieCatalog',
+    description: 'Search the local mirror of Groninger Archieven inventory finding aids (EAD records harvested via OAI-PMH). Returns archive numbers, titles, creators, date ranges, and persistent handle URLs. PREFER this over searchGroningerarchieven for any question about specific fonds, collections, inventories, or historical institutions/families that may have an archive number. Free, instant, structured data.',
+    parameters: {
+      type: 'object',
+      properties: {
+        q: {
+          type: 'string',
+          description: 'Search query in Dutch or English. Diacritics are folded (a == ä). Multiple words are AND-combined. Append * for prefix match (e.g. "godlin*"). Use OR/NEAR for boolean queries.'
+        },
+        limit: {
+          type: 'number',
+          description: 'Number of results to return. Default 10, max 25.'
+        }
+      },
+      required: ['q']
+    }
+  },
+  {
     name: 'searchGroningerarchieven',
-    description: 'Search groningerarchieven.nl for information about archive collections, historical persons, locations, events, or institutional information (opening hours, visitor info). Use this whenever you are looking for general historical information related to the Groninger Archieven.',
+    description: 'Search groningerarchieven.nl via web search for general institutional information (opening hours, visitor info, news pages) or any topic NOT covered by searchArchieCatalog. Prefer searchArchieCatalog first for actual catalog/inventory queries.',
     parameters: {
       type: 'object',
       properties: {
@@ -304,6 +323,56 @@ async function searchAlleGroningers({ q, fuzzy, deed_type, gemeente, rows = 5, s
   }
 }
 
+let _catalogDb = null
+function getCatalogDb() {
+  if (!_catalogDb) _catalogDb = openCatalogDb()
+  return _catalogDb
+}
+
+const FTS_OPERATORS = /^(AND|OR|NOT|NEAR)$/
+
+function sanitizeFtsQuery(raw) {
+  if (!raw || typeof raw !== 'string') return null
+  const trimmed = raw.trim()
+  if (!trimmed) return null
+  const tokens = trimmed.split(/\s+/).map(tok => {
+    if (FTS_OPERATORS.test(tok)) return tok
+    const cleaned = tok.replace(/["()]/g, '')
+    if (!cleaned) return null
+    if (/^[A-Za-z0-9_]+\*?$/.test(cleaned)) return cleaned
+    return `"${cleaned.replace(/"/g, '""')}"`
+  }).filter(Boolean)
+  return tokens.length ? tokens.join(' ') : null
+}
+
+async function searchArchieCatalog({ q, limit = 10 }) {
+  const ftsQuery = sanitizeFtsQuery(q)
+  if (!ftsQuery) return { error: 'Empty or invalid query.' }
+  const safeLimit = Math.max(1, Math.min(parseInt(limit, 10) || 10, 25))
+
+  try {
+    const db = getCatalogDb()
+    const rows = catalogSearch(db, ftsQuery, safeLimit)
+    const records = rows.map(r => ({
+      source: 'Groninger Archieven (catalog)',
+      title: r.title,
+      archive_no: r.archive_no,
+      repository_code: r.repository_code,
+      creator: r.creator,
+      date_from: r.date_from,
+      date_to: r.date_to,
+      snippet: r.snippet,
+      handle: r.handle || null,
+      url: r.handle
+        || `https://www.groningerarchieven.nl/archieven?mivast=5&miadt=5&mizig=${r.archive_no}&miview=inv2`,
+    }))
+    return { records, total: records.length, query: ftsQuery }
+  } catch (e) {
+    console.error('[archieCatalog ERROR]', e)
+    return { error: `Catalog search failed: ${e.message}` }
+  }
+}
+
 async function searchBeeldbank({ q, rows = 5, start = 0, from_date, to_date }) {
   try {
     const params = new URLSearchParams({
@@ -350,6 +419,7 @@ async function searchBeeldbank({ q, rows = 5, start = 0, from_date, to_date }) {
 
 export async function executeTool(name, args) {
   switch (name) {
+    case 'searchArchieCatalog': return searchArchieCatalog(args)
     case 'searchGroningerarchieven': return searchGroningerarchieven(args)
     case 'searchPoparchiefGroningen': return searchPoparchiefGroningen(args)
     case 'searchFilmbankGroningen': return searchFilmbankGroningen(args)

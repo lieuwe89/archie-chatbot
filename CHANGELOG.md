@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.0] - 2026-04-27
+### Added
+- OAI-PMH harvester (`server/scripts/harvest.js`) mirrors Groninger Archieven EAD finding aids into local SQLite/FTS5 (~3.9 MB, 2,757 records)
+- `searchArchieCatalog` LLM tool for instant structured catalog search with persistent handle URLs and live-UI fallback
+- System-prompt routing now prefers the local catalog over Tavily web search for fonds/inventory queries
+- Reuse documentation at `docs/oai-harvester.md`
+
 ## [1.8.4] - 2026-04-07
 ### Fixed
 - Chunked file upload (256 KB per request) to bypass proxy body-stream timeout on large PDFs
