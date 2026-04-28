@@ -5,6 +5,7 @@ import { openCatalogDb, search as catalogSearch, searchItems as searchItemsDb } 
 const BEELDBANK_API_KEY = process.env.BEELDBANK_API_KEY || 'fd45b590-346a-11e5-a2cb-0800200c9a66'
 const GENEALOGY_API_KEY = process.env.GENEALOGY_API_KEY || '6976bb7e-0c61-4f03-bf5b-df645d5fd086'
 const TAVILY_API_KEY = process.env.TAVILY_API_KEY
+const EUROPEANA_API_KEY = process.env.EUROPEANA_API_KEY || 'operanvialey'
 
 // Domains available for Tavily web search
 const TAVILY_DOMAINS = [
@@ -167,6 +168,32 @@ export const toolDeclarations = [
         q: {
           type: 'string',
           description: 'Search query, e.g. a licence plate number, vehicle type, or owner name.'
+        }
+      },
+      required: ['q']
+    }
+  },
+  {
+    name: 'searchEuropeana',
+    description: 'Search Europeana — the European digital cultural heritage aggregator — for digitized items (images, books, maps, paintings, 3D objects, audio/video) from thousands of European museums, libraries, and archives. Use for broad cultural heritage questions, items beyond the Groningen region, Dutch Golden Age art, pan-European heritage, or when local tools yield no results.',
+    parameters: {
+      type: 'object',
+      properties: {
+        q: {
+          type: 'string',
+          description: 'Search query. Supports field search, e.g. who:"Rembrandt" or title:"Groningen". Multiple words are AND-combined.'
+        },
+        rows: {
+          type: 'number',
+          description: 'Number of results to return. Default 5, max 20.'
+        },
+        type: {
+          type: 'string',
+          description: 'Filter by media type: IMAGE, TEXT, VIDEO, SOUND, or 3D.'
+        },
+        country: {
+          type: 'string',
+          description: 'Filter by providing country code, e.g. "nl" for Netherlands, "de" for Germany.'
         }
       },
       required: ['q']
@@ -446,6 +473,46 @@ async function searchBeeldbank({ q, rows = 5, start = 0, from_date, to_date }) {
   }
 }
 
+async function searchEuropeana({ q, rows = 5, type, country }) {
+  try {
+    const params = new URLSearchParams({
+      wskey: EUROPEANA_API_KEY,
+      query: q,
+      rows: Math.min(rows, 20),
+      profile: 'standard'
+    })
+    if (type) params.append('qf', `TYPE:${type}`)
+    if (country) params.append('qf', `COUNTRY:${country}`)
+
+    const url = `https://api.europeana.eu/record/v2/search.json?${params}`
+    const response = await fetch(url)
+    const data = await response.json()
+
+    if (!response.ok) {
+      console.error('[Europeana ERROR]', data)
+      return { error: `Europeana API error: ${data.error || response.status}` }
+    }
+
+    const records = (data.items || []).map(item => ({
+      source: 'Europeana',
+      title: Array.isArray(item.title) ? item.title[0] : item.title,
+      creator: Array.isArray(item.dcCreator) ? item.dcCreator[0] : item.dcCreator,
+      date: Array.isArray(item.year) ? item.year[0] : item.year,
+      type: item.type,
+      institution: Array.isArray(item.dataProvider) ? item.dataProvider[0] : item.dataProvider,
+      country: Array.isArray(item.country) ? item.country[0] : item.country,
+      description: Array.isArray(item.dcDescription) ? item.dcDescription[0] : item.dcDescription,
+      thumbnail: item.edmPreview?.[0] || null,
+      url: `https://www.europeana.eu/item${item.id}`
+    }))
+
+    return { records, total: data.totalResults }
+  } catch (e) {
+    console.error('[Europeana FETCH ERROR]', e)
+    return { error: `Europeana API error: ${e.message}` }
+  }
+}
+
 export async function executeTool(name, args) {
   switch (name) {
     case 'searchArchieCatalog': return searchArchieCatalog(args)
@@ -456,6 +523,7 @@ export async function executeTool(name, args) {
     case 'searchAlleGroningers': return searchAlleGroningers(args)
     case 'searchBeeldbank': return searchBeeldbank(args)
     case 'searchOpenArch': return searchOpenArch(args)
+    case 'searchEuropeana': return searchEuropeana(args)
     default: return { error: `Unknown tool: ${name}` }
   }
 }
