@@ -1,6 +1,6 @@
 {
   "name": "archie-chatbot",
-  "version": "2.2.1",
+  "version": "2.3.0",
   "description": "AI chatbot for the Groninger Archieven",
   "type": "module",
   "main": "server/index.js",
