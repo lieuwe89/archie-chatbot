@@ -308,10 +308,12 @@ function extractItemsFromEad(ead, archive_no, repository_code, datestamp, fetche
   }
 
   const archdesc = ead.archdesc || {}
-  // Start extracting from child components (c01, c02, etc.)
-  for (const key of Object.keys(archdesc)) {
+  const dsc = archdesc.dsc || {}
+
+  // Start extracting from child components in dsc (c01, c02, etc.)
+  for (const key of Object.keys(dsc)) {
     if (key.match(/^c\d+$/)) {
-      const children = asArray(archdesc[key])
+      const children = asArray(dsc[key])
       for (const child of children) {
         extractComponent(child, 1)
       }
