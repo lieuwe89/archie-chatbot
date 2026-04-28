@@ -6,6 +6,7 @@ import { dirname } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// MUST load .env before importing any other modules that use process.env
 try {
   dotenv.config({ path: path.join(__dirname, '../.env') });
 } catch (e) {
@@ -17,11 +18,9 @@ import http from 'http';
 import cors from 'cors';
 import session from 'express-session';
 import { initSessionStore } from './middleware/sessionStoreFactory.js';
-import archieAdminRoutes from './routes/archieAdmin.js';
-import archieRoutes from './routes/archie.js';
-import authRoutes from './routes/auth.js';
-import { initializeDatabase, userDb, db } from './database/db.js';
 import bcrypt from 'bcrypt';
+// Delay imports that depend on process.env being set
+let archieAdminRoutes, archieRoutes, authRoutes, initializeDatabase, userDb, db;
 
 const app = express();
 const server = http.createServer(app);
@@ -34,6 +33,18 @@ const PORT = process.env.PORT || 4008;
 // Initialize database and start server
 async function startServer() {
   try {
+    // Dynamic imports - now that dotenv.config() has run, process.env is populated
+    const imports = await Promise.all([
+      import('./routes/archieAdmin.js'),
+      import('./routes/archie.js'),
+      import('./routes/auth.js'),
+      import('./database/db.js')
+    ]);
+    archieAdminRoutes = imports[0].default;
+    archieRoutes = imports[1].default;
+    authRoutes = imports[2].default;
+    ({ initializeDatabase, userDb, db } = imports[3]);
+
     const sessionStore = await initSessionStore();
     app.use(session({
       store: sessionStore,
