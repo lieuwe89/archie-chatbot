@@ -256,7 +256,8 @@ function extractItemsFromEad(ead, archive_no, repository_code, datestamp, fetche
     if (!component) return
 
     const did = component.did || {}
-    const itemGuid = textOf(did.unitid)
+    const unitids = asArray(did.unitid)
+    const itemGuid = unitids.length > 0 ? textOf(unitids[0]) : null
     if (!itemGuid) return // Skip items without identifiers
 
     let handle = null
