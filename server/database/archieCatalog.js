@@ -63,6 +63,48 @@ CREATE TRIGGER IF NOT EXISTS inv_au AFTER UPDATE ON inventories BEGIN
   VALUES (new.rowid, new.title, new.scope, new.creator, new.subjects);
 END;
 
+CREATE TABLE IF NOT EXISTS items (
+  guid             TEXT PRIMARY KEY,
+  handle           TEXT,
+  archive_no       TEXT NOT NULL,
+  repository_code  TEXT NOT NULL,
+  title            TEXT NOT NULL,
+  creator          TEXT,
+  description      TEXT,
+  date_from        INTEGER,
+  date_to          INTEGER,
+  datestamp        TEXT NOT NULL,
+  fetched_at       TEXT NOT NULL,
+  is_deleted       INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_item_archive_no ON items(archive_no);
+CREATE INDEX IF NOT EXISTS idx_item_datestamp  ON items(datestamp);
+
+CREATE VIRTUAL TABLE IF NOT EXISTS items_fts USING fts5(
+  title, description, creator,
+  content='items',
+  content_rowid='rowid',
+  tokenize='unicode61 remove_diacritics 2'
+);
+
+CREATE TRIGGER IF NOT EXISTS item_ai AFTER INSERT ON items BEGIN
+  INSERT INTO items_fts(rowid, title, description, creator)
+  VALUES (new.rowid, new.title, new.description, new.creator);
+END;
+
+CREATE TRIGGER IF NOT EXISTS item_ad AFTER DELETE ON items BEGIN
+  INSERT INTO items_fts(items_fts, rowid, title, description, creator)
+  VALUES ('delete', old.rowid, old.title, old.description, old.creator);
+END;
+
+CREATE TRIGGER IF NOT EXISTS item_au AFTER UPDATE ON items BEGIN
+  INSERT INTO items_fts(items_fts, rowid, title, description, creator)
+  VALUES ('delete', old.rowid, old.title, old.description, old.creator);
+  INSERT INTO items_fts(rowid, title, description, creator)
+  VALUES (new.rowid, new.title, new.description, new.creator);
+END;
+
 CREATE TABLE IF NOT EXISTS harvest_state (
   set_spec              TEXT NOT NULL,
   metadata_prefix       TEXT NOT NULL,
@@ -204,6 +246,46 @@ export function search(db, query, limit = 10) {
       FROM inventories_fts
       JOIN inventories i ON i.rowid = inventories_fts.rowid
      WHERE inventories_fts MATCH ?
+       AND i.is_deleted = 0
+     ORDER BY rank
+     LIMIT ?
+  `).all(query, limit)
+}
+
+export function makeItemUpsert(db) {
+  const stmt = db.prepare(`
+    INSERT INTO items (
+      guid, handle, archive_no, repository_code, title, creator, description,
+      date_from, date_to, datestamp, fetched_at, is_deleted
+    ) VALUES (
+      @guid, @handle, @archive_no, @repository_code, @title, @creator, @description,
+      @date_from, @date_to, @datestamp, @fetched_at, @is_deleted
+    )
+    ON CONFLICT(guid) DO UPDATE SET
+      handle          = excluded.handle,
+      title           = excluded.title,
+      creator         = excluded.creator,
+      description     = excluded.description,
+      date_from       = excluded.date_from,
+      date_to         = excluded.date_to,
+      datestamp       = excluded.datestamp,
+      fetched_at      = excluded.fetched_at,
+      is_deleted      = excluded.is_deleted
+  `)
+  return function upsert(record) {
+    stmt.run(record)
+  }
+}
+
+export function searchItems(db, query, limit = 10) {
+  return db.prepare(`
+    SELECT i.guid, i.handle, i.archive_no, i.repository_code,
+           i.title, i.creator, i.description, i.date_from, i.date_to,
+           snippet(items_fts, 2, '«', '»', '…', 12) AS snippet,
+           bm25(items_fts) AS rank
+      FROM items_fts
+      JOIN items i ON i.rowid = items_fts.rowid
+     WHERE items_fts MATCH ?
        AND i.is_deleted = 0
      ORDER BY rank
      LIMIT ?

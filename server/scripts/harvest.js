@@ -16,6 +16,7 @@ import fetch from 'node-fetch'
 import { XMLParser } from 'fast-xml-parser'
 import {
   openCatalogDb, makeUpsert, markDeleted,
+  makeItemUpsert,
   getHarvestState, saveHarvestState,
   startHarvestRun, finishHarvestRun,
   CATALOG_DB_PATH,
@@ -247,6 +248,79 @@ function extractEadRecord(record, setSpec, metadataPrefix, fetchedAt) {
   }
 }
 
+// Extract items/components from EAD hierarchy
+function extractItemsFromEad(ead, archive_no, repository_code, datestamp, fetchedAt) {
+  const items = []
+
+  function extractComponent(component, level = 1) {
+    if (!component) return
+
+    const did = component.did || {}
+    const itemGuid = textOf(did.unitid)
+    if (!itemGuid) return // Skip items without identifiers
+
+    let handle = null
+    for (const u of asArray(did.unitid)) {
+      if (!u) continue
+      if (u['@type'] === 'handle') {
+        handle = textOf(u) || flattenText(u)
+        break
+      }
+    }
+
+    const title = flattenText(did.unittitle) || `(Item ${itemGuid})`
+    const creator = flattenText(did.origination) || null
+
+    // Description: prefer scopecontent, then abstract, then note
+    const descParts = [
+      flattenText(component.scopecontent),
+      flattenText(did.abstract),
+      flattenText(did.note),
+    ].filter(Boolean)
+    const description = descParts.join('\n').replace(/\s+\n/g, '\n').slice(0, 10_000) || null
+
+    const { from: date_from, to: date_to } = parseDateRange(did.unitdate)
+
+    items.push({
+      guid: `${archive_no}-${itemGuid}`.substring(0, 255),
+      handle,
+      archive_no: String(archive_no),
+      repository_code,
+      title: title.slice(0, 1000),
+      creator: creator ? creator.slice(0, 500) : null,
+      description,
+      date_from,
+      date_to,
+      datestamp,
+      fetched_at: fetchedAt,
+      is_deleted: 0,
+    })
+
+    // Recurse into child components
+    for (const childKey of Object.keys(component)) {
+      if (childKey.match(/^c\d+$/)) {
+        const children = asArray(component[childKey])
+        for (const child of children) {
+          extractComponent(child, level + 1)
+        }
+      }
+    }
+  }
+
+  const archdesc = ead.archdesc || {}
+  // Start extracting from child components (c01, c02, etc.)
+  for (const key of Object.keys(archdesc)) {
+    if (key.match(/^c\d+$/)) {
+      const children = asArray(archdesc[key])
+      for (const child of children) {
+        extractComponent(child, 1)
+      }
+    }
+  }
+
+  return items
+}
+
 async function harvest(args) {
   const db = args.dryRun ? null : openCatalogDb(args.dbPath || undefined)
   const upsert = db ? makeUpsert(db) : null
@@ -277,11 +351,13 @@ async function harvest(args) {
   }
 
   let resumptionToken = null
-  let seen = 0, inserted = 0, updated = 0, deleted = 0
+  let seen = 0, inserted = 0, updated = 0, deleted = 0, itemsInserted = 0
   let lastDatestamp = null
   let completeListSize = null
   let pageNum = 0
   const fetchedAt = new Date().toISOString()
+  let itemUpsert = null
+  if (db) itemUpsert = makeItemUpsert(db)
 
   try {
     do {
@@ -327,6 +403,15 @@ async function harvest(args) {
             const result = upsert(rec)
             if (result === 'inserted') inserted++
             else updated++
+
+            // Extract and store item-level records
+            if (r.metadata?.ead) {
+              const items = extractItemsFromEad(r.metadata.ead, rec.archive_no, rec.repository_code, rec.datestamp, fetchedAt)
+              for (const item of items) {
+                itemUpsert(item)
+                itemsInserted++
+              }
+            }
           }
         }
 
@@ -372,9 +457,10 @@ async function harvest(args) {
       })
     }
 
-    console.log(`\nDone. seen=${seen} inserted=${inserted} updated=${updated} deleted=${deleted}`)
+    console.log(`\nDone. archives: seen=${seen} inserted=${inserted} updated=${updated} deleted=${deleted}`)
+    console.log(`       items: inserted=${itemsInserted}`)
     if (db) console.log(`DB: ${args.dbPath || CATALOG_DB_PATH}`)
-    return { seen, inserted, updated, deleted }
+    return { seen, inserted, updated, deleted, itemsInserted }
   } catch (err) {
     if (db && runId) {
       finishHarvestRun(db, runId, {

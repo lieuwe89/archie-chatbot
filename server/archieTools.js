@@ -1,6 +1,6 @@
 import fetch from 'node-fetch'
 import { recordSearchRequest } from './archieSearchMonitor.js'
-import { openCatalogDb, search as catalogSearch } from './database/archieCatalog.js'
+import { openCatalogDb, search as catalogSearch, searchItems as searchItemsDb } from './database/archieCatalog.js'
 
 const BEELDBANK_API_KEY = process.env.BEELDBANK_API_KEY || 'fd45b590-346a-11e5-a2cb-0800200c9a66'
 const GENEALOGY_API_KEY = process.env.GENEALOGY_API_KEY || '6976bb7e-0c61-4f03-bf5b-df645d5fd086'
@@ -352,21 +352,50 @@ async function searchArchieCatalog({ q, limit = 10 }) {
 
   try {
     const db = getCatalogDb()
-    const rows = catalogSearch(db, ftsQuery, safeLimit)
-    const records = rows.map(r => ({
-      source: 'Groninger Archieven (catalog)',
-      title: r.title,
-      archive_no: r.archive_no,
-      repository_code: r.repository_code,
-      creator: r.creator,
-      date_from: r.date_from,
-      date_to: r.date_to,
-      snippet: r.snippet,
-      handle: r.handle || null,
-      url: r.handle
-        || `https://www.groningerarchieven.nl/archieven?mivast=5&miadt=5&mizig=${r.archive_no}&miview=inv2`,
-    }))
-    return { records, total: records.length, query: ftsQuery }
+
+    // Search both archives and items, merge results by relevance
+    const archiveRows = catalogSearch(db, ftsQuery, safeLimit)
+    const itemRows = searchItemsDb(db, ftsQuery, safeLimit)
+
+    const records = []
+
+    // Add archive records
+    for (const r of archiveRows) {
+      records.push({
+        source: 'Groninger Archieven (archive)',
+        type: 'archive',
+        title: r.title,
+        archive_no: r.archive_no,
+        repository_code: r.repository_code,
+        creator: r.creator,
+        date_from: r.date_from,
+        date_to: r.date_to,
+        snippet: r.snippet,
+        handle: r.handle || null,
+        url: r.handle
+          || `https://www.groningerarchieven.nl/archieven?mivast=5&miadt=5&mizig=${r.archive_no}&miview=inv2`,
+      })
+    }
+
+    // Add item records
+    for (const r of itemRows) {
+      records.push({
+        source: 'Groninger Archieven (item)',
+        type: 'item',
+        title: r.title,
+        archive_no: r.archive_no,
+        repository_code: r.repository_code,
+        creator: r.creator,
+        date_from: r.date_from,
+        date_to: r.date_to,
+        snippet: r.snippet,
+        handle: r.handle || null,
+        url: r.handle
+          || `https://www.groningerarchieven.nl/archieven?mivast=5&miadt=5&mizig=${r.archive_no}&miview=inv2`,
+      })
+    }
+
+    return { records: records.slice(0, safeLimit), total: records.length, query: ftsQuery }
   } catch (e) {
     console.error('[archieCatalog ERROR]', e)
     return { error: `Catalog search failed: ${e.message}` }
