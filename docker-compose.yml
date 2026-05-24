@@ -1,0 +1,16 @@
+services:
+  app:
+    image: ghcr.io/lieuwe89/archie-chatbot:latest
+    container_name: archie-chatbot
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "127.0.0.1:3004:4008"
+    volumes:
+      - /srv/data/archie-chatbot:/data
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:4008/api/auth/status').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 30s
+      timeout: 8s
+      retries: 3
+      start_period: 45s

@@ -9,7 +9,7 @@ function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider>
-        <Router basename="/archie">
+        <Router>
           <Routes>
             <Route path="/" element={<ArchieInterface />} />
             <Route path="*" element={<Navigate to="/" replace />} />

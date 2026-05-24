@@ -57,25 +57,14 @@ async function startServer() {
     // Authentication routes (public)
     app.use('/api/auth', authRoutes);
 
-    // Archie front-end API Routes
     app.use('/api/archie', archieRoutes);
-    app.use('/archie/api/archie', archieRoutes);
 
-    // Archie knowledge base admin panel
-    app.use('/archie/admin', archieAdminRoutes);
+    app.use('/admin', archieAdminRoutes);
 
-    // Root redirect to /archie/
-    app.get('/', (req, res) => res.redirect('/archie/'));
+    app.use(express.static(path.join(__dirname, '../dist'), { redirect: true }));
 
-    // Static files
-    app.use('/archie', express.static(path.join(__dirname, '../dist'), { redirect: true }));
-    app.get('/archie*', (req, res, next) => {
-      if (req.url.startsWith('/api')) return next();
-      res.sendFile(path.join(__dirname, '../dist/index.html'));
-    });
-
-    // Serve React app for all other routes
-    app.get('*', (req, res) => {
+    app.get('*', (req, res, next) => {
+      if (req.url.startsWith('/api') || req.url.startsWith('/admin')) return next();
       res.sendFile(path.join(__dirname, '../dist/index.html'));
     });
 

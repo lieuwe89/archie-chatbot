@@ -1,0 +1,8 @@
+archie-chatbot.lieuwejongsma.nl {
+	encode gzip
+
+	reverse_proxy localhost:3004 {
+		header_up X-Forwarded-Proto https
+		header_up X-Forwarded-Port 443
+	}
+}

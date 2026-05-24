@@ -36,7 +36,7 @@ setInterval(() => {
 
 function requireAdmin(req, res, next) {
   if (req.session?.archieAdmin) return next()
-  res.redirect('/archie/admin')
+  res.redirect('/admin')
 }
 
 function escapeHtml(str) {
@@ -66,7 +66,7 @@ function loginPage(error = '') {
   <div class="card">
     <h1>Archie Admin</h1>
     ${error ? `<p class="error">${escapeHtml(error)}</p>` : ''}
-    <form method="POST" action="/archie/admin/login">
+    <form method="POST" action="/admin/login">
       <input type="password" name="password" placeholder="Admin password" autofocus>
       <button type="submit">Log in</button>
     </form>
@@ -114,15 +114,15 @@ function settingsPage() {
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
       <h1>Archie Admin — Settings</h1>
-      <form method="POST" action="/archie/admin/logout" style="display:inline">
+      <form method="POST" action="/admin/logout" style="display:inline">
         <button type="submit" style="background:none;border:none;color:#666;cursor:pointer;font-size:0.875rem">Log out</button>
       </form>
     </div>
     <div class="nav">
-      <a href="/archie/admin/documents">← Back to Documents</a>
+      <a href="/admin/documents">← Back to Documents</a>
     </div>
 
-    <form method="POST" action="/archie/admin/settings" id="settingsForm" style="display:flex;flex-direction:column">
+    <form method="POST" action="/admin/settings" id="settingsForm" style="display:flex;flex-direction:column">
       <div class="setting-group">
         <label for="provider">LLM Provider</label>
         <select id="provider" name="provider" onchange="updateKeyDisplay()">
@@ -187,7 +187,7 @@ function dashboardPage(docs, pendingFiles = [], settingsUpdated = false) {
       <tr>
         <td style="padding:0.5rem 0;border-bottom:1px solid #f0f0f0">${escapeHtml(doc.title || doc.source)}</td>
         <td style="padding:0.5rem 0;border-bottom:1px solid #f0f0f0">
-          <form method="POST" action="/archie/admin/documents/${encodeURIComponent(doc.source)}/delete" style="display:inline">
+          <form method="POST" action="/admin/documents/${encodeURIComponent(doc.source)}/delete" style="display:inline">
             <button type="submit" style="background:#dc2626;color:white;border:none;padding:0.25rem 0.5rem;border-radius:4px;cursor:pointer;font-size:0.8rem" onclick="return confirm('Delete ${escapeHtml(doc.source)}?')">Delete</button>
           </form>
         </td>
@@ -227,12 +227,12 @@ function dashboardPage(docs, pendingFiles = [], settingsUpdated = false) {
   <div class="card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.25rem">
       <h1>Archie Admin — Knowledge Base</h1>
-      <form method="POST" action="/archie/admin/logout" style="display:inline">
+      <form method="POST" action="/admin/logout" style="display:inline">
         <button type="submit" style="background:none;border:none;color:#666;cursor:pointer;font-size:0.875rem">Log out</button>
       </form>
     </div>
     <div class="nav">
-      <a href="/archie/admin/settings">⚙️ Settings</a>
+      <a href="/admin/settings">⚙️ Settings</a>
     </div>
     ${settingsUpdated ? '<div class="success">✓ Settings updated successfully</div>' : ''}
     <p class="subtitle">Upload documents to expand Archie's knowledge. Accepts .txt, .md, .pdf (max 10 MB)</p>
@@ -289,7 +289,7 @@ function dashboardPage(docs, pendingFiles = [], settingsUpdated = false) {
           fd.append('totalChunks', String(totalChunks))
           fd.append('filename', file.name)
 
-          const resp = await fetch('/archie/admin/upload-chunk', { method: 'POST', body: fd })
+          const resp = await fetch('/admin/upload-chunk', { method: 'POST', body: fd })
           if (!resp.ok) {
             const msg = await resp.text()
             throw new Error(msg || resp.statusText)
@@ -298,7 +298,7 @@ function dashboardPage(docs, pendingFiles = [], settingsUpdated = false) {
 
         progressBar.value = 100
         progressLabel.textContent = 'Indexing in background…'
-        setTimeout(() => { window.location.href = '/archie/admin/documents' }, 800)
+        setTimeout(() => { window.location.href = '/admin/documents' }, 800)
       } catch (err) {
         progressEl.style.display = 'none'
         errorEl.textContent = 'Upload failed: ' + err.message
@@ -313,7 +313,7 @@ function dashboardPage(docs, pendingFiles = [], settingsUpdated = false) {
 
 // GET / — login form or redirect
 router.get('/', (req, res) => {
-  if (req.session?.archieAdmin) return res.redirect('/archie/admin/documents')
+  if (req.session?.archieAdmin) return res.redirect('/admin/documents')
   res.send(loginPage())
 })
 
@@ -326,7 +326,7 @@ router.post('/login', express.urlencoded({ extended: false }), (req, res) => {
   }
   if (password === adminPassword) {
     req.session.archieAdmin = true
-    res.redirect('/archie/admin/documents')
+    res.redirect('/admin/documents')
   } else {
     res.send(loginPage('Incorrect password.'))
   }
@@ -334,7 +334,7 @@ router.post('/login', express.urlencoded({ extended: false }), (req, res) => {
 
 // POST /logout
 router.post('/logout', (req, res) => {
-  req.session.destroy(() => res.redirect('/archie/admin'))
+  req.session.destroy(() => res.redirect('/admin'))
 })
 
 // GET /settings
@@ -412,7 +412,7 @@ router.post('/settings', requireAdmin, express.urlencoded({ extended: false }), 
     }
 
     // Redirect with success
-    res.redirect('/archie/admin/documents?settingsUpdated=1')
+    res.redirect('/admin/documents?settingsUpdated=1')
   } catch (err) {
     console.error('Error updating settings:', err)
     res.status(500).send(`Error updating settings: ${err.message}`)
@@ -507,7 +507,7 @@ router.post('/upload-chunk', requireAdmin, (req, res, next) => {
 router.post('/documents/:source/delete', requireAdmin, async (req, res) => {
   const source = decodeURIComponent(req.params.source)
   await deleteBySource(source)
-  res.redirect('/archie/admin/documents')
+  res.redirect('/admin/documents')
 })
 
 export default router

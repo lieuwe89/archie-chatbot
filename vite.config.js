@@ -7,12 +7,11 @@ export default defineConfig(({ command, mode }) => {
   
   
   return {
-    base: '/archie/', plugins: [react()],
+    base: '/', plugins: [react()],
     server: {
       port: parseInt(env.VITE_PORT) || 4009,
       proxy: {
         '/api': `http://localhost:${env.PORT || 4008}`,
-        '/archie/api': `http://localhost:${env.PORT || 4008}`,
         '/ws': {
           target: `ws://localhost:${env.PORT || 4008}`,
           ws: true
